@@ -1,6 +1,8 @@
 # Pour
 
-Declarative, extensible data transformation, fetching and composition.
+[![CircleCI](https://circleci.com/gh/dazld/pour.svg?style=svg)](https://circleci.com/gh/dazld/pour)
+
+Declarative, extensible data transformation and composition.
 
 ## Usage
 
