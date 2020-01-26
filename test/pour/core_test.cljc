@@ -19,12 +19,19 @@
   (is (pour/seqy? '()))
   (is (pour/seqy? #{})))
 
+(defn provide-test-entity
+  "In CLJ, use an actual, real datomic entity. In CLJS, provide something entity-like."
+  []
+  #?(:clj (let [uri "datomic:mem://pour-test"
+                _ (d/create-database uri)
+                conn (d/connect uri)]
+            (d/entity (d/db conn) :db/ident))
+     :cljs {:db/id 123}))
+
+
 (deftest datomic-entities
-  (testing "Datomic entities should not be treated as sequences"
-    (let [uri "datomic:mem://pour-test"
-          _ (d/create-database uri)
-          conn (d/connect uri)]
-      (is (not (pour/seqy? (d/entity (d/db conn) :db/ident)))))))
+  (testing "Datomic entity-ish values should not be treated as sequences"
+    (is (not (pour/seqy? (provide-test-entity))))))
 
 (deftest nils
   (testing "nil values on provided keys should mean that the key is also not present in the output"
