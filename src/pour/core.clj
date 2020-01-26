@@ -33,39 +33,44 @@
          (into {}))
     m))
 
-(defn parse [env {:keys [value children]}]
+(defn parse [env {:keys [value children] :as node}]
   (when value
-    (->> children
-         (map (fn [child]
-                {:pending (knit env (merge {:value value} child))
-                 :child child}))
-         (reduce (fn [acc {:keys [pending child]}]
-                   (let [resolved (deref pending)
-                         {:keys [type key params]} child
-                         v (condp = type
-                             :prop resolved
-                             :union (reduce (fn [_ {:keys [union-key children] :as uc}]
-                                              (when (matches-union union-key value)
-                                                (reduced (parse env {:value    value
-                                                                     :children children}))))
-                                            {}
-                                            (:children child))
-                             :join (if (seqy? resolved)
-                                     (->> resolved
-                                          (keep (fn [v]
-                                                  (parse env (merge {:value v} child))))
-                                          (into []))
-                                     (parse env (merge {:value resolved} child)))
-                             nil)
-                         result (or v (:default params))
-                         kname (or (:as params) key)]
-                     (if (not (nil? result))
-                       (if kname
-                         (assoc acc kname result)
-                         result)
-                       acc)))
-                 {})
-         process-map)))
+    (let [node-params (:params node)]
+      (->> children
+           (map (fn [child]
+                  {:pending (knit env (merge {:value value} child))
+                   :child child}))
+           (reduce (fn [acc {:keys [pending child]}]
+                     (let [resolved (deref pending)
+                           {:keys [type key params]} child
+                           v (condp = type
+                               :prop resolved
+                               :union (let [union-dispatch (or (when-let [custom-dispatch (:union-dispatch node-params)]
+                                                                 (and (symbol? custom-dispatch)
+                                                                      (resolve custom-dispatch)))
+                                                               matches-union)]
+                                        (reduce (fn [_ {:keys [union-key children params] :as uc}]
+                                                  (when (union-dispatch union-key value)
+                                                    (reduced (parse env {:value    value
+                                                                         :children children}))))
+                                                {}
+                                                (:children child)))
+                               :join (if (seqy? resolved)
+                                       (->> resolved
+                                            (keep (fn [v]
+                                                    (parse env (merge {:value v} child))))
+                                            (into []))
+                                       (parse env (merge {:value resolved} child)))
+                               nil)
+                           result (or v (:default params))
+                           kname (or (:as params) key)]
+                       (if (not (nil? result))
+                         (if kname
+                           (assoc acc kname result)
+                           result)
+                         acc)))
+                   {})
+           process-map))))
 
 
 (defn pour
