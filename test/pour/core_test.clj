@@ -3,10 +3,13 @@
             [pour.core :as pour]
             [datomic.api :as d]))
 
+(defrecord Test [a b])
+
 (deftest seqy
   (is (not (pour/seqy? {})))
   (is (not (pour/seqy? nil)))
   (is (not (pour/seqy? "hi")))
+  (is (not (pour/seqy? (->Test 1 2))))
   (is (pour/seqy? []))
   (is (pour/seqy? (list)))
   (is (pour/seqy? (lazy-seq (range 100))))
@@ -20,6 +23,10 @@
           _ (d/create-database uri)
           conn (d/connect uri)]
       (is (not (pour/seqy? (d/entity (d/db conn) :db/ident)))))))
+
+(deftest nils
+  (let [result (pour/pour [:a] {:a nil})]
+    (is (= {} result))))
 
 (deftest pour
   (let [constant-resolver (fn [env node]
