@@ -77,11 +77,11 @@
               {(:d1 {:as :foo}) [:d1 :d2 :d3 :d4 :should :be :ignored]}]
           start (System/currentTimeMillis)
           _ (is (= (pour/pour env q {:a {:a 1}})
-                   {:a {:a 1},
-                    :d1 :d1,
-                    :d2 :d2,
-                    :d3 :d3,
-                    :d4 :d4,
+                   {:a   {:a 1},
+                    :d1  :d1,
+                    :d2  :d2,
+                    :d3  :d3,
+                    :d4  :d4,
                     :foo {:d1 :d1,
                           :d2 :d2
                           :d3 :d3
@@ -100,25 +100,49 @@
 
 (deftest params
   (testing "as param allows renaming the key"
-    (let [root {:name    "person"
-                :age     30}
+    (let [root {:name "person"
+                :age  30}
           result (pour/pour '[(:name {:as :aliased})]
                             root)]
       (is (= (:aliased result)
              (:name root))))
-   (testing "default param should provide a value in the case the resolved value is nil"
-     (let [root {:name    "person"}
-           result (pour/pour '[(:missing {:default 100})]
-                             root)]
-       (is (= (:missing result)
-              100))))))
+    (testing "default param should provide a value in the case the resolved value is nil"
+      (let [root {:name "person"}
+            result (pour/pour '[(:missing {:default 100})]
+                              root)]
+        (is (= (:missing result)
+               100))))))
 
 (deftest unions
-  (let [root {:stuff [{:record :one}
-                      {:type :two}]}
-        result (pour/pour [{:stuff {:record [:record]
-                                    :type   [:type]}}]
+  (let [root {:stuff [{:id     1
+                       :record :one}
+                      {:id   2
+                       :type :two}]}
+        result (pour/pour [{:stuff {:record [:record :id]
+                                    :type   [:type :id]}}]
                           root)]
     (is (= result
-           {:stuff [{:record :one}
-                    {:type :two}]}))))
+           {:stuff [{:id     1
+                     :record :one}
+                    {:id   2
+                     :type :two}]}))))
+
+(defn custom-dispatch [union-key value]
+  (= (:type value) union-key))
+
+(deftest union-dispatch
+  (testing "allow providing a custom union dispatch function as a parameter"
+    (let [root {:stuff [{:type :one
+                         :something "hi"}
+                        {:type :two
+                         :another "thing"}]}
+          result (pour/pour '[{(:stuff {:union-dispatch pour.core-test/custom-dispatch}) {:one   [:type
+                                                                                                  :something]
+                                                                                          :two   [:type
+                                                                                                  :another]}}]
+                            root)]
+      (is (= result
+             {:stuff [{:type :one
+                       :something "hi"}
+                      {:type :two
+                       :another "thing"}]})))))
