@@ -40,7 +40,7 @@
           (dep-order queries)))
 
 (defn render
-  "for a given map of `renderers`, invoke the renderer `kw` with root value `root-value`
+  "for a given map of `renderers`, invoke the renderer `root-renderer` with root value `root-value`
   using the supplied `fetch` function"
   [fetch renderers root-renderer root-value]
   (let [queries (-> renderers queries resolve-all-deps)
