@@ -48,6 +48,24 @@ The Arity-3 version can take an `env` argument in the first position.
 Here the user can specify an environment, or context, in which the query is operating. 
 The user can supply a map of `resolvers` which, when present, will be used preferentially over direct access to the value.
 
+Resolvers are functions that take two arguments - `env` and the current `node` upon which it is operating. 
+The env can contain arbitrary data, its up to you. The node provide the value, and the EQL information about that position 
+in the query, eg params, type..  
+
+```clojure
+(pour/pour
+  {:now       (inst-ms (java.util.Date.))
+   :resolvers {:days-ago-timestamp (fn [{:keys [now] :as env} {:keys [value params]
+                                                               :as ast-node}]
+                                     (let [days-ago (:days-ago params)
+                                           days-ago-ms (* days-ago 24 60 60 1000)]
+                                       (- now days-ago-ms)))}}
+
+  '[(:days-ago-timestamp {:days-ago 7}) 
+    :foo] 
+  {:foo :bar})
+```
+
 
 ### Compose
 
