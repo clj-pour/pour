@@ -61,11 +61,16 @@
             :other   [{:foo1 :a}
                       {:foo1 :b}]}))))
 
+(defn now []
+  #?(:clj (System/currentTimeMillis)
+     :cljs (js/Date.now)))
+
 (defn sleepyresolver
   "Debug resolver that passes through v after a delay"
   [time v]
   (fn [& args]
-    (Thread/sleep time)
+    #?(:clj (Thread/sleep time)
+       :cljs (reduce + (range (* time time))))
     v))
 
 (deftest async
@@ -84,7 +89,7 @@
               :d3
               :d4
               {(:d1 {:as :foo}) [:d1 :d2 :d3 :d4 :should :be :ignored]}]
-          start (System/currentTimeMillis)
+          start (now)
           _ (is (= (pour/pour env q {:a {:a 1}})
                    {:a   {:a 1},
                     :d1  :d1,
@@ -95,7 +100,7 @@
                           :d2 :d2
                           :d3 :d3
                           :d4 :d4}}))
-          duration (- (System/currentTimeMillis) start)]
+          duration (- (now) start)]
       (is (< duration 250)))))
 
 
