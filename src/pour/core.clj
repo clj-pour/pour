@@ -1,10 +1,9 @@
 (ns pour.core
   (:require [edn-query-language.core :as eql])
-  (:import (clojure.lang Seqable)
-           (datomic Entity)))
+  (:import (clojure.lang Seqable)))
 
 (defn seqy? [s]
-  (and (not (instance? Entity s))
+  (and (not (:db/id s)) ; ie, a datomic Entity or similar
        (not (map? s))
        (instance? Seqable s)))
 

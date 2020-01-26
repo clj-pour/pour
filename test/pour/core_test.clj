@@ -6,6 +6,7 @@
 (defrecord Test [a b])
 
 (deftest seqy
+  (is (not (pour/seqy? {:db/id 123})))
   (is (not (pour/seqy? {})))
   (is (not (pour/seqy? nil)))
   (is (not (pour/seqy? "hi")))
