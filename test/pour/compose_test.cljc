@@ -1,5 +1,6 @@
 (ns pour.compose-test
-  (:require [clojure.test :refer :all]
+  (:require #?@(:clj  [[clojure.test :refer [deftest testing is]]]
+                :cljs [[cljs.test :refer [deftest testing is]]])
             [pour.core :as pour]
             [pour.compose :as compose]))
 
