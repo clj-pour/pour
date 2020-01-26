@@ -4,7 +4,7 @@
 
 Declarative, extensible data transformation and composition. 
 
-This is a distillation and rework of a library used by (@project-j)[https://github.com/Project-J].
+This is a distillation and rework of a library used by [@project-j](https://github.com/Project-J).
 
 - Currently only available as a git dependency via deps, eg:
 
@@ -188,7 +188,7 @@ Taking something like `atomic-design` as an inspiration, we can compose all the 
 
 ``` 
 
-The examples are in the (dev/examples)[https://github.com/clj-pour/pour/blob/master/dev/examples.clj] folder.
+The examples are in the [dev/examples](https://github.com/clj-pour/pour/blob/master/dev/examples.clj) folder.
 
 
 
