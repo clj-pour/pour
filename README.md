@@ -9,7 +9,7 @@ This is a distillation and rework of a library used by @project-j
 - Currently only available as a git dependency via deps, eg:
 
 ```
-{:deps {pour {:git/url "https://github.com/dazld/pour.git"
+{:deps {pour {:git/url "https://github.com/clj-pour/pour.git"
               :sha     "f1969d419be26782f0a13fa2fc0ea95a596bca67"}}}
 ```
 
