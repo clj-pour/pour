@@ -1,7 +1,8 @@
 (ns pour.core-test
-  (:require [clojure.test :refer :all]
-            [pour.core :as pour]
-            [datomic.api :as d]))
+  (:require #?@(:clj  [[clojure.test :refer [deftest testing is]]
+                       [datomic.api :as d]]
+                :cljs [[cljs.test :refer [deftest testing is]]])
+            [pour.core :as pour]))
 
 (defrecord Test [a b])
 
