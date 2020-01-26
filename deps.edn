@@ -1,12 +1,13 @@
 {:paths   ["src"]
  :deps    {edn-query-language/eql   {:mvn/version "0.0.9"}
-           aysylu/loom              {:mvn/version "1.0.2"}
-           com.datomic/datomic-free {:mvn/version "0.9.5697"
-                                     :exclusions  [commons-codec
-                                                   joda-time]}}
+           aysylu/loom              {:mvn/version "1.0.2"}}
+
  :aliases {:provided {:extra-deps {org.clojure/clojure       {:mvn/version "1.10.1"}
                                    org.clojure/clojurescript {:mvn/version "1.10.597"}}}
            :test     {:extra-paths ["test" "dev"]
-                      :extra-deps  {com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                      :extra-deps  {com.datomic/datomic-free {:mvn/version "0.9.5697"
+                                                              :exclusions [joda-time
+                                                                           commons-codec]}
+                                    com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
                                                                :sha     "f7ef16dc3b8332b0d77bc0274578ad5270fbfedd"}}
                       :main-opts   ["-m" "cognitect.test-runner"]}}}
