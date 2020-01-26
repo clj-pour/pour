@@ -3,7 +3,7 @@
 
 (defn seqy? [s]
   (and (not (nil? s))
-       (not (:db/id s)) ; ie, a datomic Entity or similar
+       (not (:db/id s))
        (not (map? s))
        (not (string? s))
        (seqable? s)))
@@ -14,10 +14,13 @@
 
 (defn knit [{:keys [resolvers] :as env}
             {:keys [dispatch-key value] :as node}]
-  (future (let [resolver (or (get resolvers dispatch-key)
-                             (fn default-resolver [_ _]
-                               (get value dispatch-key)))]
-            (resolver env (merge node {:value value})))))
+  (let [operate (fn []
+                  (let [resolver (or (get resolvers dispatch-key)
+                                     (fn default-resolver [_ _]
+                                       (get value dispatch-key)))]
+                    (resolver env (merge node {:value value}))))]
+    #?(:clj  (future (operate))
+       :cljs (operate))))
 
 (defn- matches-union [key value]
   (boolean (key value)))
@@ -26,36 +29,41 @@
   (if (map? m)
     (->> m
          (keep (fn [[k v]]
-                 (let [vv (if (future? v)
-                            (deref v)
-                            v)]
-                   (when (not (nil? vv))
-                     [k vv]))))
+                   (when (not (nil? v))
+                     [k v])))
          (into {}))
     m))
 
+(declare parse)
+
+(defn process-union [node-params env value child]
+  (let [custom-dispatch (:union-dispatch node-params)
+        resolved-custom-dispatcher (when (symbol? custom-dispatch)
+                                     (apply resolve [custom-dispatch]))
+        union-dispatch (or resolved-custom-dispatcher
+                           matches-union)]
+    (reduce (fn [_ {:keys [union-key children params] :as uc}]
+              (when (union-dispatch union-key value)
+                (reduced (parse env {:value    value
+                                     :children children}))))
+            {}
+            (:children child))))
+
 (defn parse [env {:keys [value children] :as node}]
   (when value
-    (let [node-params (:params node)]
+    (let [node-params (:params node)
+          extract-value #?(:clj deref
+                           :cljs identity)]
       (->> children
            (map (fn [child]
                   {:pending (knit env (merge {:value value} child))
-                   :child child}))
+                   :child   child}))
            (reduce (fn [acc {:keys [pending child]}]
-                     (let [resolved (deref pending)
+                     (let [resolved (extract-value pending)
                            {:keys [type key params]} child
                            v (condp = type
                                :prop resolved
-                               :union (let [union-dispatch (or (when-let [custom-dispatch (:union-dispatch node-params)]
-                                                                 (and (symbol? custom-dispatch)
-                                                                      (resolve custom-dispatch)))
-                                                               matches-union)]
-                                        (reduce (fn [_ {:keys [union-key children params] :as uc}]
-                                                  (when (union-dispatch union-key value)
-                                                    (reduced (parse env {:value    value
-                                                                         :children children}))))
-                                                {}
-                                                (:children child)))
+                               :union (process-union node-params env value child)
                                :join (if (seqy? resolved)
                                        (->> resolved
                                             (keep (fn [v]
