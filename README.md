@@ -2,18 +2,16 @@
 
 [![CircleCI](https://circleci.com/gh/dazld/pour.svg?style=svg)](https://circleci.com/gh/dazld/pour)
 
-Declarative, extensible data transformation and composition. This is a distillation and rework of a library used by @project-j. 
+Declarative, extensible data transformation and composition. 
 
-## Todo
+This is a distillation and rework of a library used by @project-j
 
-- improve docs (awful atm, sorry!)
-- remove datomic-free dependency (only used to not treat entities as sequences)
-- more compose tests
-- discuss pulling in more features from parent project at project-j.
+- Currently only available as a git dependency via deps, eg:
 
-## Import
-
-- Currently only available as a git dependency via deps.
+```
+{:deps {pour {:git/url "https://github.com/dazld/pour.git"
+              :sha     "f1969d419be26782f0a13fa2fc0ea95a596bca67"}}}
+```
 
 ## Usage
 
@@ -67,6 +65,28 @@ in the query, eg params, type..
 ```
 
 
-### Compose
+## Compose Usage
 
-- Tools for composing a query from functions with a `query` metadata property.
+Tools for composing a query from functions with a `query` metadata property.
+
+Functions that are annotated with metadata containing a `query` parameter can be composed on the fly into a single query.
+
+This has applications both in composing things like hiccup or API responses, but we're going to focus on building hiccup 
+from a set of suitably annotated renderers. 
+
+Taking something like `atomic-design` as an inspiration, we can compose all the disparate renderers into html like so:
+
+```clojure
+
+
+``` 
+
+
+
+
+## Todo
+
+- improve docs
+- remove datomic-free dependency (only used to not treat entities as sequences)
+- more compose tests
+- discuss pulling in more features from parent project at project-j.

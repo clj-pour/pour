@@ -25,8 +25,9 @@
       (is (not (pour/seqy? (d/entity (d/db conn) :db/ident)))))))
 
 (deftest nils
-  (let [result (pour/pour [:a] {:a nil})]
-    (is (= {} result))))
+  (testing "nil values on provided keys should mean that the key is also not present in the output"
+    (let [result (pour/pour [:a] {:a nil})]
+      (is (= {} result)))))
 
 (deftest pour
   (let [constant-resolver (fn [env node]
@@ -59,56 +60,58 @@
     v))
 
 (deftest async
-  (let [d1 (sleepyresolver 25 :d1)
-        d2 (sleepyresolver 50 :d2)
-        d3 (sleepyresolver 100 :d3)
-        d4 (sleepyresolver 30 :d4)
-        env {:resolvers {:d1 d1
-                         :d2 d2
-                         :d3 d3
-                         :d4 d4}}
-        q '[{:a [:a :b]}
-            :d1
-            :d2
-            :d3
-            :d4
-            {(:d1 {:as :foo}) [:d1 :d2 :d3 :d4 :should :be :ignored]}]
-        start (System/currentTimeMillis)
-        _ (is (= (pour/pour env q {:a {:a 1}})
-                 {:a {:a 1},
-                  :d1 :d1,
-                  :d2 :d2,
-                  :d3 :d3,
-                  :d4 :d4,
-                  :foo {:d1 :d1,
-                        :d2 :d2
-                        :d3 :d3
-                        :d4 :d4}}))
-        duration (- (System/currentTimeMillis) start)]
-    (is (< duration 250))))
+  (testing "values should be resolved in parallel as far as possible"
+    (let [d1 (sleepyresolver 25 :d1)
+          d2 (sleepyresolver 50 :d2)
+          d3 (sleepyresolver 100 :d3)
+          d4 (sleepyresolver 30 :d4)
+          env {:resolvers {:d1 d1
+                           :d2 d2
+                           :d3 d3
+                           :d4 d4}}
+          q '[{:a [:a :b]}
+              :d1
+              :d2
+              :d3
+              :d4
+              {(:d1 {:as :foo}) [:d1 :d2 :d3 :d4 :should :be :ignored]}]
+          start (System/currentTimeMillis)
+          _ (is (= (pour/pour env q {:a {:a 1}})
+                   {:a {:a 1},
+                    :d1 :d1,
+                    :d2 :d2,
+                    :d3 :d3,
+                    :d4 :d4,
+                    :foo {:d1 :d1,
+                          :d2 :d2
+                          :d3 :d3
+                          :d4 :d4}}))
+          duration (- (System/currentTimeMillis) start)]
+      (is (< duration 250)))))
 
 
 (deftest pipe
-  (let [v {:me "value"}
-        q '[{(:pipe {:as :aaa}) [:me]}]]
-    (is (= (pour/pour q v)
-           {:aaa {:me "value"}}))))
-
+  (testing "pipe resolver should pass through the left hand side to the nested query"
+    (let [v {:me "value"}
+          q '[{(:pipe {:as :aaa}) [:me]}]]
+      (is (= (pour/pour q v)
+             {:aaa {:me "value"}})))))
 
 
 (deftest params
-  (let [root {:name    "person"
-              :age     30
-              :address {:street   "10 Acacia Avenue"
-                        :city     "Berlin"
-                        :postcode "10247"}}
-        result (pour/pour '[(:name {:as :alias})
-                            (:missing {:default 100})]
-                          root)]
-    (is (= (:alias result)
-           (:name root)))
-    (is (= (:missing result)
-           100))))
+  (testing "as param allows renaming the key"
+    (let [root {:name    "person"
+                :age     30}
+          result (pour/pour '[(:name {:as :aliased})]
+                            root)]
+      (is (= (:aliased result)
+             (:name root))))
+   (testing "default param should provide a value in the case the resolved value is nil"
+     (let [root {:name    "person"}
+           result (pour/pour '[(:missing {:default 100})]
+                             root)]
+       (is (= (:missing result)
+              100))))))
 
 (deftest unions
   (let [root {:stuff [{:record :one}
