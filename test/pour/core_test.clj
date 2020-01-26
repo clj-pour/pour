@@ -1,9 +1,9 @@
 (ns pour.core-test
   (:require [clojure.test :refer :all]
-            [pour.core :as pour]))
+            [pour.core :as pour]
+            [datomic.api :as d]))
 
 (deftest seqy
-  ;(is (not (pour/seqy? (datomic.api/entity (user/ldb) :db/ident))))
   (is (not (pour/seqy? {})))
   (is (not (pour/seqy? nil)))
   (is (not (pour/seqy? "hi")))
@@ -14,13 +14,12 @@
   (is (pour/seqy? '()))
   (is (pour/seqy? #{})))
 
-(defn stopwatch [f]
-  (let [start (System/nanoTime)
-        result (f)
-        duration (- (System/nanoTime)
-                    start)]
-    (Math/floor (/ duration
-                   1e6))))
+(deftest datomic-entities
+  (testing "Datomic entities should not be treated as sequences"
+    (let [uri "datomic:mem://pour-test"
+          _ (d/create-database uri)
+          conn (d/connect uri)]
+      (is (not (pour/seqy? (d/entity (d/db conn) :db/ident)))))))
 
 (deftest pour
   (let [constant-resolver (fn [env node]
