@@ -1,11 +1,13 @@
 (ns pour.core
-  (:require [edn-query-language.core :as eql])
-  (:import (clojure.lang Seqable)))
+  (:require [edn-query-language.core :as eql]))
 
 (defn seqy? [s]
-  (and (not (:db/id s)) ; ie, a datomic Entity or similar
+  (and (not (nil? s))
+       (not (:db/id s)) ; ie, a datomic Entity or similar
        (not (map? s))
-       (instance? Seqable s)))
+       (not (string? s))
+       (seqable? s)))
+
 
 (defn pipe [_ {value :value}]
   value)
