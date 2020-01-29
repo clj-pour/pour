@@ -12,3 +12,5 @@ pom.xml.asc
 .lein-failures
 .nrepl-port
 .cpcache/
+/test-results
+/.cljs_node_repl
