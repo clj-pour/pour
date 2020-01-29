@@ -6,7 +6,7 @@ Declarative, extensible data transformation and composition.
 
 Pour consists of a library for applying EQL queries to a value, and a tool for _composing_ queries from functions annotated with a query (examples at the bottom), for example _UI_ components that return hiccup. It currently only works in `clojure` but cljs support is planned.
 
-It's attempts to answer similar questions to libraries like pathom and fulcro, but tries to be vastly simpler and does its best to have fewer opinions.
+It is an attempt to answer similar questions to libraries like pathom and fulcro, but tries to be vastly simpler and does its best to have fewer opinions. There are fewer batteries included, but that hopefully opens it up to easier comprehension and extensibility. 
 
 This is a distillation and rework of a library used by [@project-j](https://github.com/Project-J).
 
@@ -49,7 +49,7 @@ If a requested key is not present in the value, it is not present in the output.
 The Arity-3 version can take an `env` argument in the first position. 
 
 Here the user can specify an environment, or context, in which the query is operating. 
-The user can supply a map of `resolvers` which, when present, will be used preferentially over direct access to the value, 
+The user can supply a map of keys to resolver functions on the `resolvers` key on the env  which, when present, will be used preferentially over direct access to the value, 
 as in the example below.
 
 Resolvers are functions that take two arguments - `env` and the current `node` upon which it is operating. 
