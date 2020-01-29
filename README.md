@@ -4,13 +4,17 @@
 
 Declarative, extensible data transformation and composition. 
 
+Pour consists of a library for applying EQL queries to a value, and a tool for _composing_ queries from functions annotated with a query (examples at the bottom), for example _UI_ components that return hiccup. It currently only works in `clojure` but cljs support is planned.
+
+It's attempts to answer similar questions to libraries like pathom and fulcro, but tries to be vastly simpler and does its best to have fewer opinions.
+
 This is a distillation and rework of a library used by [@project-j](https://github.com/Project-J).
 
 - Currently only available as a git dependency via deps, eg:
 
 ```
 {:deps {pour {:git/url "https://github.com/clj-pour/pour.git"
-              :sha     "0d614275a6a9c1a80665505f56dc1817d2c7d76f"}}}
+              :sha     "84596524e88f744528ffef85ca028b77d1772e21"}}}
 ```
 
 
@@ -195,6 +199,6 @@ The examples are in the [dev/examples](https://github.com/clj-pour/pour/blob/mas
 ## Todo
 
 - improve docs
-- remove datomic-free dependency (only used to not treat entities as sequences)
+- ~~remove datomic-free dependency (only used to not treat entities as sequences)~~
 - more compose tests
 - discuss pulling in more features from parent project at project-j.
