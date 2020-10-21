@@ -133,17 +133,19 @@
 
 (deftest union-dispatch
   (testing "allow providing a custom union dispatch function as a parameter"
-    (let [root {:stuff [{:type :one
+    (let [root {:stuff [{:type      :one
+                         :id        123
+                         :product   :book
                          :something "hi"}
-                        {:type :two
+                        {:type    :two
+                         :id      456
+                         :product :book
                          :another "thing"}]}
-          result (pour/pour '[{(:stuff {:union-dispatch pour.core-test/custom-dispatch}) {:one   [:type
-                                                                                                  :something]
-                                                                                          :two   [:type
-                                                                                                  :another]}}]
+          result (pour/pour '[{(:stuff {:union-dispatch pour.core-test/custom-dispatch}) {:one [:type :something]
+                                                                                          :two [:type :another]}}]
                             root)]
       (is (= result
-             {:stuff [{:type :one
+             {:stuff [{:type      :one
                        :something "hi"}
-                      {:type :two
+                      {:type    :two
                        :another "thing"}]})))))
