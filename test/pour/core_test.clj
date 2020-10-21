@@ -107,10 +107,13 @@
                             root)]
       (is (= (:aliased result)
              (:name root))))
-    (testing "default param should provide a value in the case the resolved value is nil"
-      (let [root {:name "person"}
-            result (pour/pour '[(:missing {:default 100})]
+    (testing "default param should provide a value in the case the resolved value is nil only, passing boolean false through"
+      (let [root {:name "person"
+                  :boolean false}
+            result (pour/pour '[(:missing {:default 100})
+                                (:boolean {:default true})]
                               root)]
+        (is (false? (:boolean result)))
         (is (= (:missing result)
                100))))))
 
