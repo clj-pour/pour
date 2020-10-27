@@ -26,9 +26,20 @@
       (is (not (pour/seqy? (d/entity (d/db conn) :db/ident)))))))
 
 (deftest nils
+  (is (nil? (pour/pour [:a :b] nil)) "nil values are skipped")
   (testing "nil values on provided keys should mean that the key is also not present in the output"
     (let [result (pour/pour [:a] {:a nil})]
-      (is (= {} result)))))
+      (is (= {} result))))
+  (testing "resolvers that return nil don't close the return channel"
+    (let [nil-resolver (fn [_ _]
+                         nil)
+          env {:resolvers {:test/nil-resolver nil-resolver}}
+          q '[:a
+              :b
+              :c]
+          v {:a 1 :b 2 :c 3}]
+      (is (= (pour/pour env q v)
+             {:a 1 :b 2 :c 3})))))
 
 (deftest pour
   (let [constant-resolver (fn [env node]
