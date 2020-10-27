@@ -36,14 +36,15 @@
           env {:resolvers {:test/nil-resolver nil-resolver}}
           q '[:a
               :b
-              :c]
+              :c
+              :test/nil-resolver]
           v {:a 1 :b 2 :c 3}]
       (is (= (pour/pour env q v)
              {:a 1 :b 2 :c 3})))))
 
 (deftest pour
   (let [constant-resolver (fn [env node]
-                            :resolved-with-constant)
+                            ::constant)
         v {:bar     1
            :hi      :i-should-be-ignored
            :me      :also
@@ -58,7 +59,7 @@
             {:other [:foo1]}]
         env {:resolvers {:foo constant-resolver}}]
     (is (= (pour/pour env q v)
-           {:foo     :resolved-with-constant
+           {:foo     ::constant
             :hi      1
             :another {:thing :gah}
             :other   [{:foo1 :a}
@@ -119,7 +120,7 @@
       (is (= (:aliased result)
              (:name root))))
     (testing "default param should provide a value in the case the resolved value is nil only, passing boolean false through"
-      (let [root {:name "person"
+      (let [root {:name    "person"
                   :boolean false}
             result (pour/pour '[(:missing {:default 100})
                                 (:boolean {:default true})]

@@ -24,62 +24,68 @@
 
 (declare parse)
 
-(defn process-child [{:keys [env value child node-params]}]
+(defn process-child [{:keys [chan env value child node-params]}]
   (log/info ::pc value)
-  (let [on-error (or (:on-error env) (fn [t] (log/error t)))
-        resolved (try
-                   (knit env (merge {:value value} child))
-                   (catch Throwable t
-                     (on-error t)))
-        {:keys [type key params]} child
-        result (case type
-                 :prop resolved
-                 :union (let [union-dispatch (or (when-let [custom-dispatch (:union-dispatch node-params)]
-                                                   (and (symbol? custom-dispatch)
-                                                        (resolve custom-dispatch)))
-                                                 matches-union)]
-                          (reduce (fn [_ {:keys [union-key children params] :as uc}]
-                                    (when (union-dispatch union-key value)
-                                      (reduced (ca/<! (parse env {:value    value
-                                                                  :children children})))))
-                                  {}
-                                  (:children child)))
-                 :join (if (seqy? resolved)
-                         (->> resolved
-                              (keep (fn [v]
-                                      (ca/<! (parse env (merge {:value v} child)))))
-                              (into []))
-                         (ca/<! (parse env (merge {:value resolved} child))))
-                 nil)
-        result (if (nil? result)
-                 (:default params)
-                 result)
-        kname (or (:as params) key)]
-    (if kname
-      [kname result]
-      ;; change to ::nil
-      (if (nil? result)
-        ::nil
-        result))))
+  (ca/go (ca/>! chan (let [on-error (or (:on-error env) (fn [t] (log/error t)))
+                           resolved (try
+                                      (knit env (merge {:value value} child))
+                                      (catch Throwable t
+                                        (on-error t)))
+                           {:keys [type key params]} child
+                           result (case type
+                                    :prop resolved
+                                    :union (let [union-dispatch (or (when-let [custom-dispatch (:union-dispatch node-params)]
+                                                                      (and (symbol? custom-dispatch)
+                                                                           (resolve custom-dispatch)))
+                                                                    matches-union)]
+                                             (reduce (fn [_ {:keys [union-key children params] :as uc}]
+                                                       (when (union-dispatch union-key value)
+                                                         (reduced (ca/<! (parse env {:value    value
+                                                                                     :children children})))))
+                                                     {}
+                                                     (:children child)))
+                                    :join (if (seqy? resolved)
+                                            (->> resolved
+                                                 (map (fn [v]
+                                                        (parse env (merge {:value v} child))))
+                                                 (ca/map (fn [& args]
+                                                           args))
+                                                 (ca/<!)
+                                                 (into []))
+
+                                            (ca/<! (parse env (merge {:value resolved} child))))
+                                    nil)
+                           result (if (nil? result)
+                                    (:default params)
+                                    result)
+                           kname (or (:as params) key)]
+                       (prn "--" kname)
+                       (if kname
+                         [kname result]
+                         ;; change to ::nil
+                         (if (nil? result)
+                           ::nil
+                           result))))))
 
 (defn parse [env {:keys       [value children key]
                   node-params :params}]
   (prn ::k key)
-  (when value
+  (if (nil? value)
+    (ca/go nil)
     (let [chan (ca/chan)
           expected-results (count children)
           wrapping? (nil? (get-in children [0 :key]))]
       (doseq [child children]
-        (ca/go (ca/>! chan (process-child {:env         env
-                                           :value       value
-                                           :child       child
-                                           :node-params node-params}))))
+        (process-child {:env         env
+                        :chan        chan
+                        :value       value
+                        :child       child
+                        :node-params node-params}))
 
       (ca/go-loop [result {}
                    pending-results expected-results]
         (let [next-pending-count (dec pending-results)
               finished? (zero? next-pending-count)
-
               next-result (try
                             (let [out (ca/<! chan)
                                   _ (log/info ::out out)]
