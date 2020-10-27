@@ -66,38 +66,37 @@
                   node-params :params}]
   (prn ::k key)
   (when value
-    (binding []
-      (let [chan (ca/chan)
-            expected-results (count children)
-            wrapping? (nil? (get-in children [0 :key]))]
-        (doseq [child children]
-          (ca/go (ca/>! chan (process-child {:env         env
-                                             :value       value
-                                             :child       child
-                                             :node-params node-params}))))
+    (let [chan (ca/chan)
+          expected-results (count children)
+          wrapping? (nil? (get-in children [0 :key]))]
+      (doseq [child children]
+        (ca/go (ca/>! chan (process-child {:env         env
+                                           :value       value
+                                           :child       child
+                                           :node-params node-params}))))
 
-        (ca/go-loop [result {}
-                     pending-results expected-results]
-          (let [next-pending-count (dec pending-results)
-                finished? (zero? next-pending-count)
+      (ca/go-loop [result {}
+                   pending-results expected-results]
+        (let [next-pending-count (dec pending-results)
+              finished? (zero? next-pending-count)
 
-                next-result (try
-                              (let [out (ca/<! chan)
-                                    _ (log/info ::out out)]
-                                ;; change to ::nil sentinel
-                                (if wrapping?
-                                  (if (= ::nil out) nil out)
-                                  (let [[k v] out]
-                                    (if (nil? v)
-                                      result
-                                      (assoc result k v)))))
-                              (catch Throwable t
-                                (log/error ::uhoh t)
-                                result))]
-            (if finished?
-              next-result
-              (recur next-result
-                     next-pending-count))))))))
+              next-result (try
+                            (let [out (ca/<! chan)
+                                  _ (log/info ::out out)]
+                              ;; change to ::nil sentinel
+                              (if wrapping?
+                                (if (= ::nil out) nil out)
+                                (let [[k v] out]
+                                  (if (nil? v)
+                                    result
+                                    (assoc result k v)))))
+                            (catch Throwable t
+                              (log/error ::uhoh t)
+                              result))]
+          (if finished?
+            next-result
+            (recur next-result
+                   next-pending-count)))))))
 
 (defn pour
   ([query value]
