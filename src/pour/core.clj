@@ -1,7 +1,6 @@
 (ns pour.core
   (:require [edn-query-language.core :as eql]
-            [clojure.core.async :as ca]
-            [clojure.tools.logging :as log])
+            [clojure.core.async :as ca])
   (:import (clojure.lang Seqable)))
 
 (defn seqy? [s]
@@ -25,8 +24,7 @@
 (declare parse)
 
 (defn process-child [{:keys [chan env value child node-params]}]
-  (log/info ::pc value)
-  (ca/go (ca/>! chan (let [on-error (or (:on-error env) (fn [t] (log/error t)))
+  (ca/go (ca/>! chan (let [on-error (or (:on-error env) (fn [t] (prn ::error t)))
                            resolved (try
                                       (knit env (merge {:value value} child))
                                       (catch Throwable t
@@ -38,12 +36,15 @@
                                                                       (and (symbol? custom-dispatch)
                                                                            (resolve custom-dispatch)))
                                                                     matches-union)]
-                                             (reduce (fn [_ {:keys [union-key children params] :as uc}]
-                                                       (when (union-dispatch union-key value)
-                                                         (reduced (ca/<! (parse env {:value    value
-                                                                                     :children children})))))
-                                                     {}
-                                                     (:children child)))
+
+                                             (->> child
+                                                  :children
+                                                  (reduce (fn [_ {:keys [union-key children params] :as uc}]
+                                                            (when (union-dispatch union-key value)
+                                                              (reduced (parse env {:value    value
+                                                                                   :children children}))))
+                                                          {})
+                                                  (ca/<!)))
                                     :join (if (seqy? resolved)
                                             (->> resolved
                                                  (map (fn [v]
@@ -59,7 +60,6 @@
                                     (:default params)
                                     result)
                            kname (or (:as params) key)]
-                       (prn "--" kname)
                        (if kname
                          [kname result]
                          ;; change to ::nil
@@ -69,7 +69,6 @@
 
 (defn parse [env {:keys       [value children key]
                   node-params :params}]
-  (prn ::k key)
   (if (nil? value)
     (ca/go nil)
     (let [chan (ca/chan)
@@ -86,19 +85,14 @@
                    pending-results expected-results]
         (let [next-pending-count (dec pending-results)
               finished? (zero? next-pending-count)
-              next-result (try
-                            (let [out (ca/<! chan)
-                                  _ (log/info ::out out)]
-                              ;; change to ::nil sentinel
-                              (if wrapping?
-                                (if (= ::nil out) nil out)
-                                (let [[k v] out]
-                                  (if (nil? v)
-                                    result
-                                    (assoc result k v)))))
-                            (catch Throwable t
-                              (log/error ::uhoh t)
-                              result))]
+              next-result (let [out (ca/<! chan)]
+                            ;; change to ::nil sentinel
+                            (if wrapping?
+                              (if (= ::nil out) nil out)
+                              (let [[k v] out]
+                                (if (nil? v)
+                                  result
+                                  (assoc result k v)))))]
           (if finished?
             next-result
             (recur next-result
@@ -108,7 +102,6 @@
   ([query value]
    (pour {} query value))
   ([env query value]
-   (prn ::hi)
    (let [env (update env :resolvers merge {:pipe pipe})
          ast (eql/query->ast query)]
      (->> {:value value}
