@@ -36,14 +36,14 @@
                                                                       (and (symbol? custom-dispatch)
                                                                            (resolve custom-dispatch)))
                                                                     matches-union)]
-
                                              (->> child
                                                   :children
-                                                  (reduce (fn [_ {:keys [union-key children params] :as uc}]
-                                                            (when (union-dispatch union-key value)
+                                                  (reduce (fn [default {:keys [union-key children params] :as uc}]
+                                                            (if (union-dispatch union-key value)
                                                               (reduced (parse env {:value    value
-                                                                                   :children children}))))
-                                                          {})
+                                                                                   :children children}))
+                                                              default))
+                                                          (ca/go ::nil))
                                                   (ca/<!)))
                                     :join (if (seqy? resolved)
                                             (->> resolved
@@ -108,4 +108,5 @@
           (merge ast)
           (parse env)
           (ca/<!!)))))
+
 
