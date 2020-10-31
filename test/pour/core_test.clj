@@ -26,7 +26,6 @@
       (is (not (pour/seqy? (d/entity (d/db conn) :db/ident)))))))
 
 (defn union-no-match? [union-key value]
-  (prn union-key value)
   nil)
 
 (deftest nils
@@ -157,7 +156,23 @@
 (defn custom-dispatch [union-key value]
   (= (:type value) union-key))
 
+(def a 1)
+
 (deftest union-dispatch
+  (testing "dispatch is not a function calls through to on-error, result of on-error function is not used as resolved value"
+    (let [errors (atom [])
+          root {:routing {:type :a
+                          :slug-a "slug-a"}}
+          q '[{(:routing {:union-dispatch pour.core-test/a})
+               {:b [:slug-b]
+                :c [:slug-c]
+                :a [:slug-a]}}]
+          result (pour/pour {:on-error #(swap! errors conj %)} q root)]
+      (is (= result {}))
+      (is (= (.getMessage (first @errors))
+             "Union-dispatch reference provided is not a function"))
+      (is (= (ex-data (first @errors))
+             {:params {:union-dispatch 'pour.core-test/a}}))))
   (testing "dispatch on a value of a map"
     (let [root {:routing {:type :a
                           :slug-a "slug-a"}}
