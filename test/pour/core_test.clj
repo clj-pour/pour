@@ -25,11 +25,22 @@
           conn (d/connect uri)]
       (is (not (pour/seqy? (d/entity (d/db conn) :db/ident)))))))
 
+(defn union-no-match? [union-key value]
+  (prn union-key value)
+  nil)
+
 (deftest nils
-  (is (nil? (pour/pour [:a :b] nil)) "nil values are skipped")
+  (is (= nil (pour/pour [:a :b] nil)) "nil values are skipped")
   (testing "nil values on provided keys should mean that the key is also not present in the output"
     (let [result (pour/pour [:a] {:a nil})]
       (is (= {} result))))
+  (testing "union no match"
+    (let [q '[{(:a {:union-dispatch pour.core-test/union-no-match?})
+               {:bar [:baz]}}]
+          value {:a {:b {:c 1}}}
+          result (pour/pour q value)]
+      (is (= {} result)
+          "Dispatch function never matches and returns nil, empty output")))
   (testing "resolvers that return nil don't close the return channel"
     (let [nil-resolver (fn [_ _]
                          nil)
@@ -147,6 +158,15 @@
   (= (:type value) union-key))
 
 (deftest union-dispatch
+  (testing "dispatch on a value of a map"
+    (let [root {:routing {:type :a
+                          :slug-a "slug-a"}}
+          q '[{(:routing {:union-dispatch pour.core-test/custom-dispatch})
+               {:b [:slug-b]
+                :c [:slug-c]
+                :a [:slug-a]}}]
+          result (pour/pour q root)]
+      (is (= result {:routing {:slug-a "slug-a"}}))))
   (testing "allow providing a custom union dispatch function as a parameter"
     (let [root {:stuff [{:type      :one
                          :id        123
@@ -156,8 +176,9 @@
                          :id      456
                          :product :book
                          :another "thing"}]}
-          result (pour/pour '[{(:stuff {:union-dispatch pour.core-test/custom-dispatch}) {:one [:type :something]
-                                                                                          :two [:type :another]}}]
+          result (pour/pour '[{(:stuff {:union-dispatch pour.core-test/custom-dispatch})
+                               {:one [:type :something]
+                                :two [:type :another]}}]
                             root)]
       (is (= result
              {:stuff [{:type      :one
