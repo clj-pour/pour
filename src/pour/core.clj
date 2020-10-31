@@ -28,23 +28,28 @@
                            resolved (try
                                       (knit env (merge {:value value} child))
                                       (catch Throwable t
-                                        (on-error t)))
+                                        (on-error t)
+                                        nil))
                            {:keys [type key params]} child
                            result (case type
                                     :prop resolved
                                     :union (let [union-dispatch (or (when-let [custom-dispatch (:union-dispatch node-params)]
                                                                       (and (symbol? custom-dispatch)
-                                                                           (resolve custom-dispatch)))
+                                                                           (resolve custom-dispatch)
+                                                                           (deref (resolve custom-dispatch))))
                                                                     matches-union)]
-                                             (->> child
-                                                  :children
-                                                  (reduce (fn [default {:keys [union-key children params] :as uc}]
-                                                            (if (union-dispatch union-key value)
-                                                              (reduced (parse env {:value    value
-                                                                                   :children children}))
-                                                              default))
-                                                          (ca/go ::nil))
-                                                  (ca/<!)))
+                                             (if-not (fn? union-dispatch)
+                                               (do (on-error (ex-info "Union-dispatch reference provided is not a function" {:params node-params}))
+                                                   nil)
+                                               (->> child
+                                                    :children
+                                                    (reduce (fn [default {:keys [union-key children params] :as uc}]
+                                                              (if (union-dispatch union-key value)
+                                                                (reduced (parse env {:value    value
+                                                                                     :children children}))
+                                                                default))
+                                                            (ca/go ::nil))
+                                                    (ca/<!))))
                                     :join (if (seqy? resolved)
                                             (->> resolved
                                                  (map (fn [v]
