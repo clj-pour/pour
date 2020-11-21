@@ -53,27 +53,37 @@
              {:a 1 :b 2 :c 3})))))
 
 (deftest pour
-  (let [constant-resolver (fn [env node]
-                            ::constant)
-        v {:bar     1
-           :hi      :i-should-be-ignored
-           :me      :also
-           :another {:thing :gah}
-           :other   [{:foo1     :a
-                      :not-here :nono}
-                     {:foo1     :b
-                      :not-here :nono}]}
-        q '[:foo
-            (:bar {:as :hi})
-            {:another [:thing]}
-            {:other [:foo1]}]
-        env {:resolvers {:foo constant-resolver}}]
-    (is (= (pour/pour env q v)
-           {:foo     ::constant
-            :hi      1
-            :another {:thing :gah}
-            :other   [{:foo1 :a}
-                      {:foo1 :b}]}))))
+  (testing "baseline"
+    (let [constant-resolver (fn [env node]
+                              ::constant)
+          v {:bar     1
+             :hi      :i-should-be-ignored
+             :me      :also
+             :another {:thing :gah}
+             :other   [{:foo1     :a
+                        :not-here :nono}
+                       {:foo1     :b
+                        :not-here :nono}]}
+          q '[:foo
+              (:bar {:as :hi})
+              {:another [:thing]}
+              {:other [:foo1]}]
+          env {:resolvers {:foo constant-resolver}}]
+      (is (= (pour/pour env q v)
+             {:foo     ::constant
+              :hi      1
+              :another {:thing :gah}
+              :other   [{:foo1 :a}
+                        {:foo1 :b}]})))))
+
+(deftest empty-seqs
+  (testing "via resolver"
+    (let [empty-resolver (constantly (list))
+          v {}
+          q '[{:empty/resolver [:a :b]}]
+          env {:resolvers {:empty/resolver empty-resolver}}]
+      (is (= {}
+             (pour/pour env q v))))))
 
 (defn sleepyresolver
   "Debug resolver that passes through v after a delay"
@@ -156,14 +166,14 @@
 (defn custom-dispatch [union-key value]
   (= (:type value) union-key))
 
-(def a 1)
+(def not-a-function 1)
 
 (deftest union-dispatch
   (testing "dispatch is not a function calls through to on-error, result of on-error function is not used as resolved value"
     (let [errors (atom [])
           root {:routing {:type :a
                           :slug-a "slug-a"}}
-          q '[{(:routing {:union-dispatch pour.core-test/a})
+          q '[{(:routing {:union-dispatch pour.core-test/not-a-function})
                {:b [:slug-b]
                 :c [:slug-c]
                 :a [:slug-a]}}]
@@ -172,7 +182,7 @@
       (is (= (.getMessage (first @errors))
              "Union-dispatch reference provided is not a function"))
       (is (= (ex-data (first @errors))
-             {:params {:union-dispatch 'pour.core-test/a}}))))
+             {:params {:union-dispatch 'pour.core-test/not-a-function}}))))
   (testing "dispatch on a value of a map"
     (let [root {:routing {:type :a
                           :slug-a "slug-a"}}

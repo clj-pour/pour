@@ -51,13 +51,15 @@
                                                             (ca/go ::nil))
                                                     (ca/<!))))
                                     :join (if (seqy? resolved)
-                                            (->> resolved
-                                                 (map (fn [v]
-                                                        (parse env (merge {:value v} child))))
-                                                 (ca/map (fn [& args]
-                                                           args))
-                                                 (ca/<!)
-                                                 (into []))
+                                            (if (empty? resolved)
+                                              nil
+                                              (->> resolved
+                                                   (map (fn [v]
+                                                          (parse env (merge {:value v} child))))
+                                                   (ca/map (fn [& args]
+                                                             args))
+                                                   (ca/<!)
+                                                   (into [])))
 
                                             (ca/<! (parse env (merge {:value resolved} child))))
                                     nil)
