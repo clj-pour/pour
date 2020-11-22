@@ -22,7 +22,7 @@ Resolution is run inside core async processes, and runs in parallel as far as po
 
 ```
 {:deps {pour {:git/url "https://github.com/clj-pour/pour.git"
-              :sha     "4d5ce28bb607360b0aaffc2f69db07ead0637c96"}}}
+              :sha     "99547c2c17de2856a10f6e3c4f227582d9e4f230"}}}
 ```
 
 ## Usage
