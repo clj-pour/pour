@@ -59,7 +59,7 @@
                      (-> t ex-cause ex-data)))]
         (is (= 1 (count (:errors t))))
         (is (= (list #{}) (get-in t [:errors 0 :invalid-accessors])))))
-    (testing "altogether"
+    (testing "combined errors"
       (let [t (try (eval-in-temp-ns (view [:a :a #{}]
                                           (fn [])))
                    (catch Throwable t
