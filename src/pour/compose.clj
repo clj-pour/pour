@@ -1,8 +1,7 @@
 (ns pour.compose
   (:require [clojure.walk :as walk]
             [loom.graph :as g]
-            [loom.alg :as alg]
-            [clojure.set :as set]))
+            [loom.alg :as alg]))
 
 (defn query
   ([component]
