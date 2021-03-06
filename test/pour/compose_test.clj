@@ -1,7 +1,7 @@
 (ns pour.compose-test
   (:require [clojure.test :refer :all]
             [pour.core :as pour]
-            [pour.compose :as compose]))
+            [pour.compose :refer [view] :as compose]))
 
 (def r1
   ^{:query '[:foo
@@ -20,6 +20,18 @@
   ^{:query '[]}
   (fn render [r {}]))
 
+(def r4)
+
+(deftest views
+  (let [a (view [:a
+                 (:b {:as c})
+                 {:r2 r2/render}]
+                (fn [{:r2/keys [a]
+                      :keys [b]}]
+                  [:div a]))]
+    (is (= #{::compose/query
+             ::compose/fn}
+           (set (keys a))))))
 
 (deftest queries
   (let [fetch (partial pour/pour {})
