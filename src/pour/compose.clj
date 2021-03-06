@@ -71,14 +71,14 @@
               (into join-errors)
 
               (seq invalid-accessors)
-              (conj {:error      "Query contains bad accessors"
+              (conj {:error             "Query contains bad accessors"
                      :invalid-accessors invalid-accessors})
 
               (not (every? (fn [[k v]]
                              (= 1 v))
                            freqs))
               (conj {:error      "duplicate identifiers found in query"
-                     :query q
+                     :query      q
                      :duplicates (into {} (keep (fn [[k v]] (when (> v 1) [k v])) freqs))})))))
 
 (defmacro view
@@ -86,7 +86,7 @@
   [query body]
   (let [query-errors# (validate-query query)]
     (when (seq query-errors#)
-      (throw (ex-info "Query Error" {:type ::query-error
+      (throw (ex-info "Query Error" {:type   ::query-error
                                      :errors query-errors#})))
     `(with-meta ~body
                 (merge (meta ~body)
@@ -97,7 +97,7 @@
   [cup-name query body]
   (let [query-errors# (validate-query query)]
     (when (seq query-errors#)
-      (throw (ex-info "Query Error" {:type ::query-error
+      (throw (ex-info "Query Error" {:type   ::query-error
                                      :errors query-errors#})))
     `(def ~cup-name
        (with-meta ~body
