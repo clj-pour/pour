@@ -49,6 +49,15 @@
                                           (list? i)
                                           (map? i)))
                                     q)
+          join-errors (reduce (fn [acc v]
+                                (if-not (map? v)
+                                  acc
+                                  (if (vector? (second (first v)))
+                                    (into acc (validate-query (second (first v))))
+                                    acc)))
+
+                              []
+                              q)
           idents (keep (fn [v]
                          (cond
                            (keyword? v) v
@@ -58,16 +67,19 @@
                        q)
           freqs (frequencies idents)]
       (cond-> []
+              (seq join-errors)
+              (into join-errors)
+
               (seq invalid-accessors)
               (conj {:error      "Query contains bad accessors"
                      :invalid-accessors invalid-accessors})
+
               (not (every? (fn [[k v]]
                              (= 1 v))
                            freqs))
               (conj {:error      "duplicate identifiers found in query"
-                     :duplicates (into {} (keep (fn [[k v]] (when (> v 1) [k v])) freqs))})
-              (not (vector? q))
-              (conj)))))
+                     :query q
+                     :duplicates (into {} (keep (fn [[k v]] (when (> v 1) [k v])) freqs))})))))
 
 (defmacro view
   "View component"
@@ -79,6 +91,19 @@
     `(with-meta ~body
                 (merge (meta ~body)
                        {:query '~query}))))
+
+(defmacro defcup
+  "Define a cup to pour."
+  [cup-name query body]
+  (let [query-errors# (validate-query query)]
+    (when (seq query-errors#)
+      (throw (ex-info "Query Error" {:type ::query-error
+                                     :errors query-errors#})))
+    `(def ~cup-name
+       (with-meta ~body
+                  (merge (meta ~body)
+                         {:query '~query})))))
+
 
 (defn render
   "for a given map of `renderers`, invoke the renderer `root-renderer` with root value `root-value`
