@@ -73,15 +73,12 @@
 (defmacro view
   "View component"
   [query body]
-  (let [query# (first (next &form))
-        query-errors# (validate-query query)]
+  (let [query-errors# (validate-query query)]
     (when (seq query-errors#)
       (throw (ex-info "nuhuh" {:errors query-errors#})))
     `(with-meta ~body
-                {:query '~query})
-    #_`{::query (quote ~query)
-        ::fn    ~body}))
-
+                (merge (meta ~body)
+                       {:query '~query}))))
 
 (defn render
   "for a given map of `renderers`, invoke the renderer `root-renderer` with root value `root-value`
