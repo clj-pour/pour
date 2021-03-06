@@ -41,46 +41,46 @@
           (dep-order queries)))
 
 (defn validate-query [q]
-  (let [invalid-idents (remove (fn [i]
-                                 (or (keyword? i)
-                                     (list? i)
-                                     (map? i)))
-                               q)
-        idents (keep (fn [v]
-                       (cond
-                         (keyword? v) v
-                         (list? v) (or (:as (second v))
-                                       (first v))
-                         (map? v) (first (keys v))))
-                     q)
-        freqs (frequencies idents)]
-    (cond-> []
-            (seq invalid-idents)
-            (conj {::error      "invalid query "
-                   ::bad-idents invalid-idents})
-            (not (every? (fn [[k v]]
-                           (= 1 v))
-                         freqs))
-            (conj {::error      "duplicate identifiers found in query"
-                   ::duplicates (into {} (keep (fn [[k v]] (when (> v 1) [k v])) freqs))})
-            (not (vector? q))
-            (conj {::error "query not a vector"
-                   ::query q}))))
+  (if-not (vector? q)
+    [{:error "query not a vector"
+      :query q}]
+    (let [invalid-accessors (remove (fn [i]
+                                      (or (keyword? i)
+                                          (list? i)
+                                          (map? i)))
+                                    q)
+          idents (keep (fn [v]
+                         (cond
+                           (keyword? v) v
+                           (list? v) (or (:as (second v))
+                                         (first v))
+                           (map? v) (first (keys v))))
+                       q)
+          freqs (frequencies idents)]
+      (cond-> []
+              (seq invalid-accessors)
+              (conj {:error      "Query contains bad accessors"
+                     :invalid-accessors invalid-accessors})
+              (not (every? (fn [[k v]]
+                             (= 1 v))
+                           freqs))
+              (conj {:error      "duplicate identifiers found in query"
+                     :duplicates (into {} (keep (fn [[k v]] (when (> v 1) [k v])) freqs))})
+              (not (vector? q))
+              (conj)))))
 
 
 (defmacro view
   "View component"
   [query body]
-  (let [query-map# (first (next &form))
-        fn# (quote body)
-        query-errors# (validate-query query-map#)]
-    (prn ::f (first (second body)))
-    (when-let [errors query-errors#]
-      (prn ::invalid-query query-map# errors)
-      (throw (ex-info "nuhuh" {:error :bad})))
-    (prn ::qm query-map#)
-    `{::query (quote ~query)
-      ::fn    ~body}))
+  (let [query# (first (next &form))
+        query-errors# (validate-query query)]
+    (when (seq query-errors#)
+      (throw (ex-info "nuhuh" {:errors query-errors#})))
+    `(with-meta ~body
+                {:query '~query})
+    #_`{::query (quote ~query)
+        ::fn    ~body}))
 
 
 (defn render
