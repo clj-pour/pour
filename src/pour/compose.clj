@@ -69,13 +69,13 @@
               (not (vector? q))
               (conj)))))
 
-
 (defmacro view
   "View component"
   [query body]
   (let [query-errors# (validate-query query)]
     (when (seq query-errors#)
-      (throw (ex-info "nuhuh" {:errors query-errors#})))
+      (throw (ex-info "Query Error" {:type ::query-error
+                                     :errors query-errors#})))
     `(with-meta ~body
                 (merge (meta ~body)
                        {:query '~query}))))
