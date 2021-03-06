@@ -5,7 +5,8 @@
 
 (defn query
   ([component]
-   (:query (meta component)))
+   (or (::query component)
+       (:query (meta component))))
   ([kw component]
    (into [(list :renderer {:default kw})]
          (query component))))
@@ -38,6 +39,32 @@
             (update queries' k #(inject-query queries %)))
           queries
           (dep-order queries)))
+
+(defn validate-query [q]
+  (let []
+    (and (vector? q)
+         (= (count q) (count (set q)))
+         (every? (fn [i]
+                   (or (keyword? i)
+                       (list? i)
+                       (map? i)))
+                 q))))
+
+(defmacro view
+  "View component"
+  [query body]
+  (let [query-map# (first (next &form))
+        fn# (quote body)
+        valid-query?# (validate-query query-map#)]
+    (prn ::f (first (second body)))
+    (when-not valid-query?#
+      (prn ::invalid-query query-map#)
+      (throw (ex-info "nuhuh" {:error :bad})))
+    (prn ::qm query-map#)
+    `{::query (quote ~query)
+      ::fn    ~body}))
+
+
 
 (defn render
   "for a given map of `renderers`, invoke the renderer `root-renderer` with root value `root-value`
