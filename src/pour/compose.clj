@@ -1,7 +1,8 @@
 (ns pour.compose
   (:require [clojure.walk :as walk]
             [loom.graph :as g]
-            [loom.alg :as alg]))
+            [loom.alg :as alg]
+            [clojure.set :as set]))
 
 (defn query
   ([component]
@@ -41,29 +42,46 @@
           (dep-order queries)))
 
 (defn validate-query [q]
-  (let []
-    (and (vector? q)
-         (= (count q) (count (set q)))
-         (every? (fn [i]
-                   (or (keyword? i)
-                       (list? i)
-                       (map? i)))
-                 q))))
+  (let [invalid-idents (remove (fn [i]
+                                 (or (keyword? i)
+                                     (list? i)
+                                     (map? i)))
+                               q)
+        idents (keep (fn [v]
+                       (cond
+                         (keyword? v) v
+                         (list? v) (or (:as (second v))
+                                       (first v))
+                         (map? v) (first (keys v))))
+                     q)
+        freqs (frequencies idents)]
+    (cond-> []
+            (seq invalid-idents)
+            (conj {::error      "invalid query "
+                   ::bad-idents invalid-idents})
+            (not (every? (fn [[k v]]
+                           (= 1 v))
+                         freqs))
+            (conj {::error      "duplicate identifiers found in query"
+                   ::duplicates (into {} (keep (fn [[k v]] (when (> v 1) [k v])) freqs))})
+            (not (vector? q))
+            (conj {::error "query not a vector"
+                   ::query q}))))
+
 
 (defmacro view
   "View component"
   [query body]
   (let [query-map# (first (next &form))
         fn# (quote body)
-        valid-query?# (validate-query query-map#)]
+        query-errors# (validate-query query-map#)]
     (prn ::f (first (second body)))
-    (when-not valid-query?#
-      (prn ::invalid-query query-map#)
+    (when-let [errors query-errors#]
+      (prn ::invalid-query query-map# errors)
       (throw (ex-info "nuhuh" {:error :bad})))
     (prn ::qm query-map#)
     `{::query (quote ~query)
       ::fn    ~body}))
-
 
 
 (defn render
