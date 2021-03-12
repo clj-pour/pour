@@ -5,10 +5,9 @@
 
 (defn query
   ([component]
-   (or (::query component)
-       (:query (meta component))))
+   (:query (meta component)))
   ([kw component]
-   (into [(list :renderer {:default kw})]
+   (into [(list ::renderer {:default kw})]
          (query component))))
 
 (defn queries [renderers]
@@ -81,17 +80,6 @@
                      :query      q
                      :duplicates (into {} (keep (fn [[k v]] (when (> v 1) [k v])) freqs))})))))
 
-(defmacro view
-  "View component"
-  [query body]
-  (let [query-errors# (validate-query query)]
-    (when (seq query-errors#)
-      (throw (ex-info "Query Error" {:type   ::query-error
-                                     :errors query-errors#})))
-    `(with-meta ~body
-                (merge (meta ~body)
-                       {:query '~query}))))
-
 (defmacro defcup
   "Define a cup to pour."
   [cup-name query body]
@@ -103,7 +91,6 @@
        (with-meta ~body
                   (merge (meta ~body)
                          {:query '~query})))))
-
 
 (defn render
   "for a given map of `renderers`, invoke the renderer `root-renderer` with root value `root-value`
