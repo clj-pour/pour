@@ -11,10 +11,22 @@
      (eval
        '(do ~@forms))))
 
+(defcup r2
+  [{(:pipe {:as :r3}) r3}
+   (:other {:default 1})]
+  (fn render [r {}]))
+
+(defcup r3
+  []
+  (fn render [r {}]))
+
+
 (defcup r1
   [:foo
    :bar
+   ;; r2 below is a var, and so the macro will resolve at compile time
    {(:pipe {:as :r2}) r2}
+   ;; r4 here is a symbol, so this gets looked up at runtime
    {(:pipe {:as :r4}) r4}]
   (fn render [r {:keys              [r4]
                  {::c/keys [renderer]
@@ -24,19 +36,11 @@
      [:span other]
      ((:r4 r) r r4)]))
 
-(defcup r2
-  [(:other {:default 1})]
-  (fn render [r {}]))
-
-(defcup r3
-  []
-  (fn render [r {}]))
 
 (defcup r4 [:a :b]
   (fn [r {::c/keys [renderer]
           :keys    [a b] :as v}]
     [:div.r4 a b renderer]))
-
 
 (deftest views
   (testing "invalid queries"
@@ -99,6 +103,7 @@
              :foo
              :bar
              {(:pipe {:as :r2}) [(::c/renderer {:default :r2})
+                                 {(:pipe {:as :r3}) [(::c/renderer {:default :r3})]}
                                  (:other {:default 1})]}
              {(:pipe {:as :r4}) [(::c/renderer {:default :r4})
                                  :a
