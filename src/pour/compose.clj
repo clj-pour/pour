@@ -82,15 +82,20 @@
 
 (defmacro defcup
   "Define a cup to pour."
-  [cup-name query body]
-  (let [query-errors# (validate-query query)]
+  [cup-name query-literal body]
+  (let [resolved-query (walk/prewalk (fn [query-part]
+                                       (if (var? query-part)
+                                         (query @query-part)
+                                         query-part))
+                                     query-literal)
+        query-errors# (validate-query resolved-query)]
     (when (seq query-errors#)
       (throw (ex-info "Query Error" {:type   ::query-error
                                      :errors query-errors#})))
     `(def ~cup-name
        (with-meta ~body
                   (merge (meta ~body)
-                         {:query '~query})))))
+                         {:query '~resolved-query})))))
 
 (defn render
   "for a given map of `renderers`, invoke the renderer `root-renderer` with root value `root-value`
