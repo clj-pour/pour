@@ -1,7 +1,8 @@
 (ns pour.compose
   (:require [clojure.walk :as walk]
             [loom.graph :as g]
-            [loom.alg :as alg]))
+            [loom.alg :as alg])
+  (:import (clojure.lang Namespace)))
 
 (defn query
   ([component]
@@ -20,7 +21,7 @@
 
 (defn dep-map [config]
   (zipmap (keys config)
-          (map #(set (filter symbol? (find-vars (query %))))
+          (map #(set (find-vars (query %)))
                (vals config))))
 
 (defn dep-order [config]
@@ -84,8 +85,15 @@
   "Define a cup to pour."
   [cup-name query-literal body]
   (let [resolved-query (walk/prewalk (fn [query-part]
-                                       (if (var? query-part)
-                                         (query @query-part)
+                                       (if (symbol? query-part)
+                                         (if-let [rvar# (resolve query-part)]
+                                           (let [m# (meta rvar#)
+                                                 name# (:name m#)
+                                                 ^Namespace ns# (:ns m#)
+                                                 kw# (keyword (some-> ns# (.getName) (name))
+                                                              (some-> name# (name)))]
+                                             (query kw# (deref rvar#)))
+                                           query-part)
                                          query-part))
                                      query-literal)
         query-errors# (validate-query resolved-query)]
