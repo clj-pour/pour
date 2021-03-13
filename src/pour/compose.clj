@@ -86,8 +86,11 @@
   (let [resolved-query# (walk/prewalk (fn [query-part]
                                         (if (symbol? query-part)
                                           (if-let [rvar# (resolve &env query-part)]
-                                            (let [kw# (keyword (symbol rvar#))]
-                                              (query kw# (deref rvar#)))
+                                            (let [kw# (keyword (symbol rvar#))
+                                                  mq# (:query (meta (deref rvar#)))]
+                                              (if mq#
+                                                (query kw# rvar#)
+                                                rvar#))
                                             query-part)
                                           query-part))
                                       query-literal)

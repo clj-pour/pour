@@ -40,6 +40,8 @@
      [:span other]
      (pour.compose-test/r4 r4)]))
 
+
+
 (deftest views
   (testing "invalid queries"
     (testing "query is not a vector"
@@ -86,6 +88,34 @@
       (is (= query '[:a
                      (:b {:as :c})
                      {:r2 r2}])))))
+
+(defn custom-dispatch [union-key value]
+  (= (:type value) union-key))
+
+(defcup r5
+  [{(:stuff {:union-dispatch custom-dispatch}) {:one [:type :something]
+                                                :two [:type :another]}}]
+  (fn [r {:as d}]
+    [:div.r5 d]))
+
+(deftest unions
+  (let [value {:stuff [{:type      :one
+                        :id        123
+                        :product   :book
+                        :something "hi"}
+                       {:type    :two
+                        :id      456
+                        :product :book
+                        :another "thing"}]}
+        fetch (partial pour/pour {})
+        result (c/render fetch
+                         {:r5 r5}
+                         :r5
+                         value)]
+    (is (= [:div.r5 {:pour.compose/renderer :r5, :stuff [{:type :one, :something "hi"} {:type :two, :another "thing"}]}]
+           result))))
+
+
 
 (deftest queries
   (let [fetch (partial pour/pour {})
