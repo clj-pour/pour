@@ -20,16 +20,16 @@
    (:other {:default 1})]
   (fn render [r {}]))
 
-
-(defcup r4 [:a :b]
-  (fn [r {::c/keys [renderer]
-          :keys    [a b] :as v}]
+(defcup r4
+  [:a :b]
+  (fn [{::c/keys [renderer]
+        :keys    [a b] :as v}]
     [:div.r4 a b renderer]))
 
 (defcup r1
   [:foo
    :bar
-   ;; r2 & r4 below is a var, and so the macro will resolve at compile time
+   ;; r2 & r4 below is a var, and so the macro will resolve & inline queries at compile time
    {(:pipe {:as :r2}) r2}
    {(:pipe {:as :r4}) r4}]
   (fn render [r {:keys              [r4]
@@ -38,7 +38,7 @@
     [:section
      [:span renderer]
      [:span other]
-     ((:r4 r) r r4)]))
+     (pour.compose-test/r4 r4)]))
 
 (deftest views
   (testing "invalid queries"

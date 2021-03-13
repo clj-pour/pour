@@ -1,8 +1,7 @@
 (ns pour.compose
   (:require [clojure.walk :as walk]
             [loom.graph :as g]
-            [loom.alg :as alg])
-  (:import (clojure.lang Namespace)))
+            [loom.alg :as alg]))
 
 (defn query
   ([component]
@@ -84,26 +83,22 @@
 (defmacro defcup
   "Define a cup to pour."
   [cup-name query-literal body]
-  (let [resolved-query (walk/prewalk (fn [query-part]
-                                       (if (symbol? query-part)
-                                         (if-let [rvar# (resolve query-part)]
-                                           (let [m# (meta rvar#)
-                                                 name# (:name m#)
-                                                 ^Namespace ns# (:ns m#)
-                                                 kw# (keyword (some-> ns# (.getName) (name))
-                                                              (some-> name# (name)))]
-                                             (query kw# (deref rvar#)))
-                                           query-part)
-                                         query-part))
-                                     query-literal)
-        query-errors# (validate-query resolved-query)]
+  (let [resolved-query# (walk/prewalk (fn [query-part]
+                                        (if (symbol? query-part)
+                                          (if-let [rvar# (resolve &env query-part)]
+                                            (let [kw# (keyword (symbol rvar#))]
+                                              (query kw# (deref rvar#)))
+                                            query-part)
+                                          query-part))
+                                      query-literal)
+        query-errors# (validate-query resolved-query#)]
     (when (seq query-errors#)
       (throw (ex-info "Query Error" {:type   ::query-error
                                      :errors query-errors#})))
     `(def ~cup-name
        (with-meta ~body
                   (merge (meta ~body)
-                         {:query '~resolved-query})))))
+                         {:query '~resolved-query#})))))
 
 (defn render
   "for a given map of `renderers`, invoke the renderer `root-renderer` with root value `root-value`
