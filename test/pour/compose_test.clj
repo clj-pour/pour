@@ -11,22 +11,26 @@
      (eval
        '(do ~@forms))))
 
+(defcup r3
+  []
+  (fn render [r {}]))
+
 (defcup r2
   [{(:pipe {:as :r3}) r3}
    (:other {:default 1})]
   (fn render [r {}]))
 
-(defcup r3
-  []
-  (fn render [r {}]))
 
+(defcup r4 [:a :b]
+  (fn [r {::c/keys [renderer]
+          :keys    [a b] :as v}]
+    [:div.r4 a b renderer]))
 
 (defcup r1
   [:foo
    :bar
-   ;; r2 below is a var, and so the macro will resolve at compile time
+   ;; r2 & r4 below is a var, and so the macro will resolve at compile time
    {(:pipe {:as :r2}) r2}
-   ;; r4 here is a symbol, so this gets looked up at runtime
    {(:pipe {:as :r4}) r4}]
   (fn render [r {:keys              [r4]
                  {::c/keys [renderer]
@@ -35,12 +39,6 @@
      [:span renderer]
      [:span other]
      ((:r4 r) r r4)]))
-
-
-(defcup r4 [:a :b]
-  (fn [r {::c/keys [renderer]
-          :keys    [a b] :as v}]
-    [:div.r4 a b renderer]))
 
 (deftest views
   (testing "invalid queries"
@@ -99,19 +97,20 @@
                          :r1
                          {:a 1
                           :b 2})]
-    (is (= '[(::c/renderer {:default :r1})
+    (is (= '[(:pour.compose/renderer {:default :r1})
              :foo
              :bar
-             {(:pipe {:as :r2}) [(::c/renderer {:default :r2})
-                                 {(:pipe {:as :r3}) [(::c/renderer {:default :r3})]}
-                                 (:other {:default 1})]}
-             {(:pipe {:as :r4}) [(::c/renderer {:default :r4})
-                                 :a
-                                 :b]}]
+             {(:pipe {:as :r2})
+              [(:pour.compose/renderer {:default :pour.compose-test/r2})
+               {(:pipe {:as :r3})
+                [(:pour.compose/renderer {:default :pour.compose-test/r3})]}
+               (:other {:default 1})]}
+             {(:pipe {:as :r4})
+              [(:pour.compose/renderer {:default :pour.compose-test/r4}) :a :b]}]
            (:query (meta result))))
 
     (is (= [:section
-            [:span :r2]
+            [:span ::r2]
             [:span 1]
-            [:div.r4 1 2 :r4]]
+            [:div.r4 1 2 ::r4]]
            result))))
