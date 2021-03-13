@@ -89,7 +89,7 @@
                                             (let [kw# (keyword (symbol rvar#))
                                                   mq# (:query (meta (deref rvar#)))]
                                               (if mq#
-                                                (query kw# rvar#)
+                                                (query kw# (deref rvar#))
                                                 rvar#))
                                             query-part)
                                           query-part))
