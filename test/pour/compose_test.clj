@@ -38,7 +38,7 @@
     [:section
      [:span renderer]
      [:span other]
-     (pour.compose-test/r4 r4)]))
+     ((::c/render-fn r4) r4)]))
 
 
 
@@ -92,11 +92,26 @@
 (defn custom-dispatch [union-key value]
   (= (:type value) union-key))
 
+(defcup one-renderer
+  [:type :something]
+  (fn [r {:keys [type something]}]
+    [:div.one-r type something]))
+
+(defcup two-renderer
+  [:type :another]
+  (fn [r {:keys [type another]}]
+    [:div.two-r type another]))
+
 (defcup r5
-  [{(:stuff {:union-dispatch custom-dispatch}) {:one [:type :something]
-                                                :two [:type :another]}}]
+  [{(:stuff {:union-dispatch custom-dispatch}) {;;direct reference, query is inlined
+                                                :one one-renderer
+                                                ;; defined at runtime
+                                                :two test/two-render}}]
   (fn [r {:as d}]
-    [:div.r5 d]))
+    [:div.r5
+     (for [i (:stuff d)]
+       (let [renderer (::c/render-fn i)]
+         (renderer r i)))]))
 
 (deftest unions
   (let [value {:stuff [{:type      :one
@@ -109,12 +124,13 @@
                         :another "thing"}]}
         fetch (partial pour/pour {})
         result (c/render fetch
-                         {:r5 r5}
+                         {:r5 r5
+                          :test/two-render two-renderer}
                          :r5
                          value)]
-    (is (= [:div.r5 {:pour.compose/renderer :r5, :stuff [{:type :one, :something "hi"} {:type :two, :another "thing"}]}]
+    (is (= '[:div.r5 ([:div.one-r :one "hi"]
+                      [:div.two-r :two "thing"])]
            result))))
-
 
 
 (deftest queries
@@ -127,18 +143,6 @@
                          :r1
                          {:a 1
                           :b 2})]
-    (is (= '[(:pour.compose/renderer {:default :r1})
-             :foo
-             :bar
-             {(:pipe {:as :r2})
-              [(:pour.compose/renderer {:default :pour.compose-test/r2})
-               {(:pipe {:as :r3})
-                [(:pour.compose/renderer {:default :pour.compose-test/r3})]}
-               (:other {:default 1})]}
-             {(:pipe {:as :r4})
-              [(:pour.compose/renderer {:default :pour.compose-test/r4}) :a :b]}]
-           (:query (meta result))))
-
     (is (= [:section
             [:span ::r2]
             [:span 1]
