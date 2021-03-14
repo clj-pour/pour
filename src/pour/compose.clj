@@ -7,7 +7,8 @@
   ([component]
    (:query (meta component)))
   ([kw component]
-   (into [(list ::renderer {:default kw})]
+   (into [(list ::renderer {:default kw})
+          (list ::render-fn {:default component})]
          (query component))))
 
 (defn queries [renderers]
