@@ -36,8 +36,7 @@
                                     :union (let [union-dispatch (or (when-let [custom-dispatch (:union-dispatch node-params)]
                                                                       (or (and (var? custom-dispatch) @custom-dispatch)
                                                                           (and (symbol? custom-dispatch)
-                                                                               (resolve custom-dispatch)
-                                                                               (deref (resolve custom-dispatch)))))
+                                                                               (some-> custom-dispatch resolve deref))))
                                                                     matches-union)]
                                              (if-not (fn? union-dispatch)
                                                (do (on-error (ex-info "Union-dispatch reference provided is not a function" {:params node-params}))
