@@ -13,12 +13,12 @@
 
 (defcup r3
   []
-  (fn render [r {}]))
+  (fn render [{}]))
 
 (defcup r2
   [{(:pipe {:as :r3}) r3}
    (:other {:default 1})]
-  (fn render [r {}]))
+  (fn render [{}]))
 
 (defcup r4
   [:a :b]
@@ -29,12 +29,11 @@
 (defcup r1
   [:foo
    :bar
-   ;; r2 & r4 below is a var, and so the macro will resolve & inline queries at compile time
    {(:pipe {:as :r2}) r2}
    {(:pipe {:as :r4}) r4}]
-  (fn render [r {:keys              [r4]
-                 {::c/keys [renderer]
-                  :keys    [other]} :r2}]
+  (fn render [{:keys              [r4]
+               {::c/keys [renderer]
+                :keys    [other]} :r2}]
     [:section
      [:span renderer]
      [:span other]
@@ -93,13 +92,13 @@
   (= (:type value) union-key))
 
 (defcup one-renderer
-  [:type :something]
-  (fn [r {:keys [type something]}]
+  [:type :something {:foo test/bla}]
+  (fn [{:keys [type something]}]
     [:div.one-r type something]))
 
 (defcup two-renderer
   [:type :another]
-  (fn [r {:keys [type another]}]
+  (fn [{:keys [type another]}]
     [:div.two-r type another]))
 
 (defcup r5
@@ -107,11 +106,11 @@
                                                 :one one-renderer
                                                 ;; defined at runtime
                                                 :two test/two-render}}]
-  (fn [r {:as d}]
+  (fn [{:as d}]
     [:div.r5
      (for [i (:stuff d)]
        (let [renderer (::c/render-fn i)]
-         (renderer r i)))]))
+         (renderer i)))]))
 
 (deftest unions
   (let [value {:stuff [{:type      :one
@@ -122,12 +121,8 @@
                         :id      456
                         :product :book
                         :another "thing"}]}
-        fetch (partial pour/pour {})
-        result (c/render fetch
-                         {:r5 r5
-                          :test/two-render two-renderer}
-                         :r5
-                         value)]
+        result '(c/render2 r5 value)]
+    (clojure.pprint/pprint (meta r5))
     (is (= '[:div.r5 ([:div.one-r :one "hi"]
                       [:div.two-r :two "thing"])]
            result))))
