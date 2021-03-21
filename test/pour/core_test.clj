@@ -29,6 +29,14 @@
   nil)
 
 (deftest nils
+  (testing "missing query should throw"
+    (let [!e (atom nil)]
+      (try
+        (pour/pour nil nil)
+        (catch Throwable e
+          (reset! !e e)))
+      (is (instance? Throwable @!e))
+      (is (= (ex-message @!e) "Missing query"))))
   (is (= nil (pour/pour [:a :b] nil)) "nil values are skipped")
   (testing "nil values on provided keys should mean that the key is also not present in the output"
     (let [result (pour/pour [:a] {:a nil})]
