@@ -111,9 +111,11 @@
   ([env query value]
    (let [env (update env :resolvers merge {:pipe pipe})
          ast (eql/query->ast query)]
-     (->> {:value value}
-          (merge ast)
-          (parse env)
-          (ca/<!!)))))
+     (if-not query
+       (throw (ex-info "Missing query" {:env env :query query}))
+       (->> {:value value}
+            (merge ast)
+            (parse env)
+            (ca/<!!))))))
 
 
