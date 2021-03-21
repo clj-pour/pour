@@ -1,7 +1,8 @@
 (ns pour.compose
   (:require [clojure.walk :as walk]
             [loom.graph :as g]
-            [loom.alg :as alg]))
+            [loom.alg :as alg]
+            [pour.core :as pour]))
 
 (defn query
   ([component]
@@ -84,35 +85,64 @@
 (defmacro defcup
   "Define a cup to pour."
   [cup-name query-literal body]
-  (let [resolved-query# (walk/prewalk (fn [query-part]
+  (let [!unresolved-symbols# (atom #{})
+        resolved-query# (walk/prewalk (fn [query-part]
                                         (if (symbol? query-part)
                                           (if-let [rvar# (resolve &env query-part)]
                                             (let [kw# (keyword (symbol rvar#))
+                                                  ;; pick up unresolved renderers from children
+                                                  qp-unresolveds# (::unresolved (meta (deref rvar#)))
                                                   mq# (:query (meta (deref rvar#)))]
+                                              ;; merge into accumulated unresolveds at this level
+                                              (when (seq qp-unresolveds#)
+                                                (swap! !unresolved-symbols# into qp-unresolveds#))
                                               (if mq#
                                                 (query kw# (deref rvar#))
                                                 rvar#))
-                                            query-part)
+                                            (do
+                                              ;; the passed symbol doesn't correspond to anything we can resolve
+                                              ;; hence, we will expect it to be supplied at runtime
+                                              (swap! !unresolved-symbols# conj (keyword query-part))
+                                              query-part))
                                           query-part))
                                       query-literal)
-        query-errors# (validate-query resolved-query#)]
+        query-errors# (validate-query resolved-query#)
+        unresolveds# @!unresolved-symbols#]
     (when (seq query-errors#)
       (throw (ex-info "Query Error" {:type   ::query-error
                                      :errors query-errors#})))
     `(def ~cup-name
        (with-meta ~body
                   (merge (meta ~body)
-                         {:query '~resolved-query#})))))
+                         {::unresolved '~unresolveds#
+                          :query       '~resolved-query#})))))
+
+(defn render2
+  ([renderer value]
+   (render2 {} renderer value))
+  ([env renderer value]
+   (let [m (meta renderer)
+         query (:query m)
+         unresolveds (::unresolved m)
+         renderers (::renderers env)]
+     (with-meta (->> (pour/pour (or env {})
+                                query
+                                value)
+                     (renderer))
+                {:renderer renderer
+                 :query    query}))))
 
 (defn render
   "for a given map of `renderers`, invoke the renderer `root-renderer` with root value `root-value`
   using the supplied `fetch` function"
   [fetch renderers root-renderer root-value]
   (let [queries (-> renderers queries resolve-all-deps)
-        renderer (root-renderer renderers)
+        renderer (if (fn? root-renderer)
+                   root-renderer
+                   (root-renderer renderers))
         query (root-renderer queries)]
     (with-meta (or (->> (fetch query root-value)
-                        (renderer renderers))
+                        (renderer))
                    {})
                {:renderer renderer
                 :query    query})))
