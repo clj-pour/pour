@@ -125,6 +125,7 @@
          query (:query m)
          unresolveds (::unresolved m)
          renderers (::renderers env)]
+         ;; zip up the unresolveds with supplied renderers and error if something missing
      (with-meta (->> (pour/pour (or env {})
                                 query
                                 value)
