@@ -1,7 +1,7 @@
 (ns pour.compose-test
   (:require [clojure.test :refer :all]
             [pour.core :as pour]
-            [pour.compose :refer [defcup] :as c]))
+            [pour.compose :refer [defcup] :as pc]))
 
 (defmacro eval-in-temp-ns [& forms]
   `(binding [*ns* *ns*]
@@ -22,8 +22,8 @@
 
 (defcup r4
   [:a :b]
-  (fn [{::c/keys [renderer]
-        :keys    [a b] :as v}]
+  (fn [{::pc/keys [renderer]
+        :keys     [a b] :as v}]
     [:div.r4 a b renderer]))
 
 (defcup r1
@@ -31,13 +31,13 @@
    :bar
    {(:pipe {:as :r2}) r2}
    {(:pipe {:as :r4}) r4}]
-  (fn render [{:keys              [r4]
-               {::c/keys [renderer]
-                :keys    [other]} :r2}]
+  (fn render [{:keys               [r4]
+               {::pc/keys [renderer]
+                :keys     [other]} :r2}]
     [:section
      [:span renderer]
      [:span other]
-     ((::c/render-fn r4) r4)]))
+     ((::pc/render-fn r4) r4)]))
 
 
 
@@ -88,11 +88,50 @@
                      (:b {:as :c})
                      {:r2 r2}])))))
 
+(defcup us2
+  [:a :b]
+  (fn [{:keys [a b]}]
+    [:u2 a b]))
+
+(defcup us1
+  [{:u1 test/us2}]
+  (fn [{:keys [u1]}]
+    [:u1 ((::pc/render-fn u1) u1)]))
+
+(defcup us3
+  [{:u3 test/us1}]
+  (fn [{:keys [u3]}]
+    [:u3 ((::pc/render-fn u3) u3)]))
+
+(deftest unresolved-symbols
+  (testing "placeholders that cannot be resolved at runtime throw"
+    (let [!err (atom nil)
+          result (try (pc/render us1 {})
+                      (catch Throwable e
+                        (reset! !err e)))
+          err @!err]
+      (is (instance? Throwable err))
+      (is (= {:query-part 'test/us2}
+             (ex-data err)))))
+  (testing "nested placeholders resolve correctly"
+    (let [result (pc/render {::pc/renderers {:test/us2  us2
+                                             :test/us1 us1}}
+                            us3
+                            {:u3 {:u1 {:a 1 :b 2}}})]
+      (is (= [:u3 [:u1 [:u2 1 2]]]
+             result))))
+  (testing "placeholders are replaced with supplied renderers"
+    (let [result (pc/render {::pc/renderers {:test/us2 us2}}
+                            us1
+                            {:u1 {:a 1 :b 2}})]
+      (is (= [:u1 [:u2 1 2]]
+             result)))))
+
 (defn custom-dispatch [union-key value]
   (= (:type value) union-key))
 
 (defcup one-renderer
-  [:type :something {:foo test/bla}]
+  [:type :something]
   (fn [{:keys [type something]}]
     [:div.one-r type something]))
 
@@ -109,7 +148,7 @@
   (fn [{:as d}]
     [:div.r5
      (for [i (:stuff d)]
-       (let [renderer (::c/render-fn i)]
+       (let [renderer (::pc/render-fn i)]
          (renderer i)))]))
 
 (deftest unions
@@ -121,23 +160,17 @@
                         :id      456
                         :product :book
                         :another "thing"}]}
-        result '(c/render2 r5 value)]
-    (clojure.pprint/pprint (meta r5))
-    (is (= '[:div.r5 ([:div.one-r :one "hi"]
-                      [:div.two-r :two "thing"])]
-           result))))
-
+        result (pc/render {::pc/renderers {:test/two-render two-renderer}} r5 value)]
+    (is (= result
+           '[:div.r5 ([:div.one-r :one "hi"]
+                      [:div.two-r :two "thing"])]))))
 
 (deftest queries
   (let [fetch (partial pour/pour {})
-        result (c/render fetch
-                         {:r1 r1
-                          :r2 r2
-                          :r3 r3
-                          :r4 r4}
-                         :r1
-                         {:a 1
-                          :b 2})]
+        result (pc/render {}
+                          r1
+                          {:a 1
+                           :b 2})]
     (is (= [:section
             [:span ::r2]
             [:span 1]
