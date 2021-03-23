@@ -1,6 +1,5 @@
 (ns pour.compose-test
   (:require [clojure.test :refer :all]
-            [pour.core :as pour]
             [pour.compose :refer [defcup] :as pc]))
 
 (defmacro eval-in-temp-ns [& forms]
@@ -24,7 +23,7 @@
   [:a :b]
   (fn [{::pc/keys [renderer]
         :keys     [a b] :as v}]
-    [:div.r4 a b renderer]))
+    [:div.r4 a b (::pc/ident (meta renderer))]))
 
 (defcup r1
   [:foo
@@ -35,11 +34,20 @@
                {::pc/keys [renderer]
                 :keys     [other]} :r2}]
     [:section
-     [:span renderer]
+     [:span (::pc/ident (meta renderer))]
      [:span other]
-     ((::pc/render-fn r4) r4)]))
+     ((::pc/renderer r4) r4)]))
 
-
+(deftest queries
+  (let [result (pc/render {}
+                          r1
+                          {:a 1
+                           :b 2})]
+    (is (= [:section
+            [:span ::r2]
+            [:span 1]
+            [:div.r4 1 2 ::r4]]
+           result))))
 
 (deftest views
   (testing "invalid queries"
@@ -96,12 +104,12 @@
 (defcup us1
   [{:u1 test/us2}]
   (fn [{:keys [u1]}]
-    [:u1 ((::pc/render-fn u1) u1)]))
+    [:u1 ((::pc/renderer u1) u1)]))
 
 (defcup us3
   [{:u3 test/us1}]
   (fn [{:keys [u3]}]
-    [:u3 ((::pc/render-fn u3) u3)]))
+    [:u3 ((::pc/renderer u3) u3)]))
 
 (deftest unresolved-symbols
   (testing "placeholders that cannot be resolved at runtime throw"
@@ -148,7 +156,7 @@
   (fn [{:as d}]
     [:div.r5
      (for [i (:stuff d)]
-       (let [renderer (::pc/render-fn i)]
+       (let [renderer (::pc/renderer i)]
          (renderer i)))]))
 
 (deftest unions
@@ -165,14 +173,4 @@
            '[:div.r5 ([:div.one-r :one "hi"]
                       [:div.two-r :two "thing"])]))))
 
-(deftest queries
-  (let [fetch (partial pour/pour {})
-        result (pc/render {}
-                          r1
-                          {:a 1
-                           :b 2})]
-    (is (= [:section
-            [:span ::r2]
-            [:span 1]
-            [:div.r4 1 2 ::r4]]
-           result))))
+
