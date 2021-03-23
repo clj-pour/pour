@@ -1,6 +1,6 @@
 (ns pour.compose-test
   (:require [clojure.test :refer :all]
-            [pour.compose :refer [defcup] :as pc]))
+            [pour.compose :refer [defcup render] :as pc]))
 
 (defmacro eval-in-temp-ns [& forms]
   `(binding [*ns* *ns*]
@@ -21,32 +21,28 @@
 
 (defcup r4
   [:a :b]
-  (fn [{::pc/keys [renderer]
-        :keys     [a b] :as v}]
-    [:div.r4 a b (::pc/ident (meta renderer))]))
+  (fn [{:keys [a b] :as v}]
+    [:div.r4 a b]))
 
 (defcup r1
   [:foo
    :bar
    {(:pipe {:as :r2}) r2}
    {(:pipe {:as :r4}) r4}]
-  (fn render [{:keys               [r4]
-               {::pc/keys [renderer]
-                :keys     [other]} :r2}]
+  (fn render [{:keys           [r4]
+               {:keys [other]} :r2}]
     [:section
-     [:span (::pc/ident (meta renderer))]
      [:span other]
-     ((::pc/renderer r4) r4)]))
+     ((:pour.compose/renderer r4) r4)]))
 
 (deftest queries
-  (let [result (pc/render {}
-                          r1
-                          {:a 1
-                           :b 2})]
+  (let [result (render {}
+                       r1
+                       {:a 1
+                        :b 2})]
     (is (= [:section
-            [:span ::r2]
             [:span 1]
-            [:div.r4 1 2 ::r4]]
+            [:div.r4 1 2]]
            result))))
 
 (deftest views
@@ -90,8 +86,10 @@
                                       (fn [{:r2/keys [a]
                                             :keys    [c]}]
                                         [:div a]))))
-          {:keys [query]} (meta a)]
+          {::pc/keys [unresolved]
+           :keys     [query]} (meta a)]
       (is (fn? a))
+      (is (= #{:r2} unresolved))
       (is (= query '[:a
                      (:b {:as :c})
                      {:r2 r2}])))))
@@ -122,7 +120,7 @@
       (is (= {:query-part 'test/us2}
              (ex-data err)))))
   (testing "nested placeholders resolve correctly"
-    (let [result (pc/render {::pc/renderers {:test/us2  us2
+    (let [result (pc/render {::pc/renderers {:test/us2 us2
                                              :test/us1 us1}}
                             us3
                             {:u3 {:u1 {:a 1 :b 2}}})]

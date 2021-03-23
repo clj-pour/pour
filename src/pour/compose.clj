@@ -84,10 +84,6 @@
                                           query-part))
                                       query-literal)
         query-errors# (validate-query resolved-query#)
-        ident# (or (some-> (resolve &env cup-name)
-                           (symbol)
-                           (keyword))
-                   ::unknown)
         unresolveds# @!unresolved-symbols#]
     (when (seq query-errors#)
       (throw (ex-info "Query Error" {:type   ::query-error
@@ -96,7 +92,6 @@
        (with-meta ~body
                   (merge (meta ~body)
                          {::unresolved '~unresolveds#
-                          ::ident      ~ident#
                           :query       '~resolved-query#})))))
 
 (defn render
