@@ -1,7 +1,7 @@
 (ns pour.core
   (:require [edn-query-language.core :as eql]
             [clojure.core.async :as ca])
-  (:import (clojure.lang Seqable IFn)))
+  (:import (clojure.lang Seqable)))
 
 (defn seqy? [s]
   (and (not (:db/id s))
