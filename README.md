@@ -2,21 +2,23 @@
 
 [![CircleCI](https://circleci.com/gh/clj-pour/pour.svg?style=svg)](https://circleci.com/gh/clj-pour/pour)
 
-Status: alpha. API is stable however, with only additions planned.
-
-
 ## A nice strong cup of EQL.
 
-For a given function, and any nested calls, how do we know what data we need to satisfy that tree of functions? Can we ask the functions to tell us, and figure that out before we call them..? Can we just get the data, without the calls?
+For a given function, and any nested calls, how do we know what data we need to satisfy that tree of functions?
+Can we ask the functions to tell us, and figure that out before we even call those functions?
 
-In a very specific way, `pour` tries to answer yes to both of those questions. Imagine `select-keys` where the first argument can be EQL, and the keys can either be accessors to a property on the value, or an invocation of a resolver on the value at that point. Further, imagine being able to build the EQL query up from the functions themselves, so that the description of the data a function needs is colocated with the function itself.
+In a very specific way, `pour` tries to answer yes to those questions. Imagine `select-keys` where the first argument
+can be EQL, and the keys can either be accessors to a property on the value, or an invocation of a resolver on the value
+at that point. Further, imagine being able to build the EQL query up from the functions themselves, so that the
+description of the data a function needs is colocated with the function itself.
 
-Pour consists of a library for applying EQL queries to a value, and a tool for composing queries from functions annotated with a query (examples at the bottom), with the primary use case being functions that return hiccup (or similar).
+Pour consists of a library for applying EQL queries to a value, and a tool for composing queries from functions
+annotated with a query (examples at the bottom), with the primary use case being functions that return hiccup (or
+similar).
 
 It currently only supports JVM clojure but cljs support is under development.
 
 Resolution is run inside core async processes, and runs in parallel as far as possible.
-
 
 - available as a git dependency via deps, eg:
 
@@ -80,33 +82,23 @@ position in the query, eg params, type..
 
 ## Compose Usage
 
-Tools for composing a query from functions with a `query` metadata property.
-
-Functions that are annotated with metadata containing a `query` parameter can be composed on the fly into a single query.
-
-This has applications both in composing things like hiccup or API responses, but we're going to focus on building hiccup
-from a set of suitably annotated renderers.
-
-Taking something like atomic-design as an inspiration, we can compose all the disparate renderers into html like so:
+Tool for composing and executing `defcup` components together. Pour knows nothing about what the output might
+be - that's up to you - but we'll be building hiccup in the examples below.
 
 ```clojure
 
 (ns example
   (:require [pour.core :as pour]
-            [pour.compose :as compose]))
+            [pour.compose :as pc :refer [defcup]]))
 
-(def link
+(defcup link
   ; The metadata below defines the keys which the renderer requires
-  ; In this case, we're just providing a vector of keys, so no need to quote the query
-  ^{:query [:uri :title]}
-  ; The args to the render function itself are as follows:
-  ; r - this is a map of all the renderers provided at the root. we use this to lookup
-  ; any nested renderers and invoke them, after the data has been resolved
+  [:uri :title]
   ; data - this is the value of the data resolved by pour at this level.
-  (fn render [r {:keys [uri title]}]
+  (fn render [{:keys [uri title]}]
     [:a {:href uri} title]))
 
-(def nav
+(defcup nav
   ; In the query below we provide a symbol, meaning that compose will try to look up
   ; that symbol as a keyword in the provided renderers, and inline the query associated
   ; with that renderer at this point in the query, before any data is resolved. That query
@@ -114,23 +106,20 @@ Taking something like atomic-design as an inspiration, we can compose all the di
   ; the `:app-nav` resolver, which is a collection of links) at data fetch time.
   ; it's not currently possibly to inline a query without joining it on something.
   ; As we're using symbols, we have to quote the query now.
-  ^{:query '[{:app-nav atom/link}]}
-  ; For this component, we've declared a dependency on the `atom/link` component above,
-  ; so we will have to look it up in the supplied `r` map of renderers to invoke it
-  ; with the data previously resolved.
+  [{:app-nav link}]}
+  ; For this component, we've declared a dependency on the `link` component above,
   ; we don't actually know anything about what this component needs, beyond that we're joining
   ; onto the values provided by :app-nav, all we do is declare that we're using this, and that
   ; we'll be invoking it.
-  (fn render [r {:keys [app-nav]}]
+  (fn render [{:keys [app-nav]}]
     [:nav
-     (for [link app-nav]
-       ; This is a bit tortuous, but we look up the function and then invoke it with the renderers
-       ; map and the data.
-       ((:atom/link r) r link))]))
+     (for [nav-link app-nav]
+       ;; The renderer is also available on the ::pc/renderer key of the resolved data as a function
+       (link nav-link))]))
 
-(def title
-  ^{:query [:title]}
-  (fn [_ {:keys [title]}]
+(defcup title
+  [:title]
+  (fn [{:keys [title]}]
     [:section.main-title
      [:img.logo {:src "/logo.jpg"}]
      [:h1 title]]))
@@ -169,32 +158,21 @@ Taking something like atomic-design as an inspiration, we can compose all the di
                                 :title "Blog"}
                                {:uri   "/blog/1"
                                 :title "Article"}])}]
-    (compose/render ; fetch data function, partially applied with an environment
+    (pc/render ; fetch data function, partially applied with an environment
                     (partial pour/pour {:resolvers resolvers})
 
-                    ; all the renderers we're providing
-                    (renderers)
-
                     ; where to start, a root
-                    :template/app
-
+                    app
                     ; the value which we join the harvested query from the root above
                     root-value)))
 
 
 ; Given all the plumbing above, we end up with a dynamically created query something like this:
-[(:renderer {:default :template/app})
- {(:pipe {:as :title}) [(:renderer {:default :atom/title}) :title]}
- {(:pipe {:as :navigation}) [(:renderer {:default :organism/nav})
-                             {:app-nav [(:renderer {:default :atom/link}) :uri :title]}]}]
-
-
-
-(comment
-  ; output of the renderers
-  (render-stuff)
-  ; we get some metadata back from the composition giving us the query and which renderer we invoked
-  (meta (render-stuff)))
+[{(:pipe {:as :title})
+  [:title]}
+ {(:pipe {:as :navigation})
+  [{:app-nav
+    [:uri :title]}]}]
 
 
 ```
