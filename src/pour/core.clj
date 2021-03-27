@@ -34,7 +34,8 @@
                            result (case type
                                     :prop resolved
                                     :union (let [union-dispatch (or (when-let [custom-dispatch (:union-dispatch node-params)]
-                                                                      (or (and (var? custom-dispatch) @custom-dispatch)
+                                                                      (or (and (fn? custom-dispatch) custom-dispatch)
+                                                                          (and (var? custom-dispatch) @custom-dispatch)
                                                                           (and (symbol? custom-dispatch)
                                                                                (some-> custom-dispatch resolve deref))))
                                                                     matches-union)]

@@ -171,4 +171,16 @@
            '[:div.r5 ([:div.one-r :one "hi"]
                       [:div.two-r :two "thing"])]))))
 
+(def av "av")
+(defcup a1
+  [(:foo {:default av})]
+  (fn [{:keys [foo] :as d}]
+    [:div foo]))
+
+
+(deftest inlining
+  (testing "default values"
+    (let [result (pc/render a1 {})]
+      (is (= [:div "av"]
+             result)))))
 
