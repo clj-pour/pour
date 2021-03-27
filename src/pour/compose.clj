@@ -75,7 +75,7 @@
                                                 (swap! !unresolved-symbols# into qp-unresolveds#))
                                               (if mq#
                                                 (query (deref rvar#))
-                                                rvar#))
+                                                (deref rvar#)))
                                             (do
                                               ;; the passed symbol doesn't correspond to anything we can resolve
                                               ;; hence, we will expect it to be supplied at runtime
