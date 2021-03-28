@@ -11,11 +11,11 @@ It currently only supports JVM clojure but cljs support is under development.
 
 Resolution is run inside core async processes, and runs in parallel as far as possible.
 
-- available as a git dependency via deps, eg:
+- available as a git dependency via deps, eg (latest stable):
 
 ```
 {:deps {pour {:git/url "https://github.com/clj-pour/pour.git"
-              :sha     "99547c2c17de2856a10f6e3c4f227582d9e4f230"}}}
+              :sha     "07efe0455b5473dab89af6e29bc5905a74cfd118"}}}
 ```
 
 ## Usage
