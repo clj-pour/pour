@@ -1,7 +1,7 @@
 (ns pour.core-test
-  (:require [clojure.test :refer :all]
-            [pour.core :as pour]
-            [datomic.api :as d]))
+  (:require #?@(:clj  [[clojure.test :refer [deftest testing is]]]
+                :cljs [[cljs.test :refer [deftest testing is]]])
+            [pour.core :as pour]))
 
 (defrecord Test [a b])
 
@@ -17,13 +17,6 @@
   (is (pour/seqy? (lazy-cat [] [])))
   (is (pour/seqy? '()))
   (is (pour/seqy? #{})))
-
-(deftest datomic-entities
-  (testing "Datomic entities should not be treated as sequences"
-    (let [uri "datomic:mem://pour-test"
-          _ (d/create-database uri)
-          conn (d/connect uri)]
-      (is (not (pour/seqy? (d/entity (d/db conn) :db/ident)))))))
 
 (defn union-no-match? [union-key value]
   nil)
