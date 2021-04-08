@@ -5,6 +5,11 @@
 
 (defrecord Test [a b])
 
+(defn now []
+  #?(:clj (System/currentTimeMillis)
+     :cljs (js/Date.now)))
+
+
 (deftest seqy
   (is (not (pour/seqy? {:db/id 123})))
   (is (not (pour/seqy? {})))
@@ -91,7 +96,9 @@
   [time v]
   (fn [& args]
     (Thread/sleep time)
-    v))
+    #?(:clj (Thread/sleep time)
+       :cljs (reduce + (range (* time time))))
+   v))
 
 (deftest async
   (testing "values should be resolved in parallel as far as possible"
@@ -109,7 +116,7 @@
               :d3
               :d4
               {(:d1 {:as :foo}) [:d1 :d2 :d3 :d4 :should :be :ignored]}]
-          start (System/currentTimeMillis)
+          start (now)
           _ (is (= (pour/pour env q {:a {:a 1}})
                    {:a   {:a 1},
                     :d1  :d1,
@@ -120,7 +127,7 @@
                           :d2 :d2
                           :d3 :d3
                           :d4 :d4}}))
-          duration (- (System/currentTimeMillis) start)]
+          duration (- (now) start)]
       (is (< duration 250)))))
 
 
