@@ -5,9 +5,12 @@
  :aliases {:provided {:extra-deps {org.clojure/clojure       {:mvn/version "1.10.3"}
                                    org.clojure/clojurescript {:mvn/version "1.10.773"}}}
            :test     {:extra-paths ["test" "dev"]
-                      :extra-deps  {com.datomic/datomic-free  {:mvn/version "0.9.5697"
-                                                               :exclusions  [joda-time/joda-time
-                                                                             commons-codec/commons-codec]}
-                                    com.cognitect/test-runner {:git/url "https://github.com/cognitect-labs/test-runner.git"
-                                                               :sha     "b6b3193fcc42659d7e46ecd1884a228993441182"}}
+                      :extra-deps  {lambdaisland/kaocha           {:mvn/version "1.0.732"}
+                                    lambdaisland/kaocha-cljs      {:mvn/version "0.0-71"}
+                                    lambdaisland/kaocha-junit-xml {:mvn/version "0.0.76"}
+                                    com.datomic/datomic-free      {:mvn/version "0.9.5697"
+                                                                   :exclusions  [joda-time/joda-time
+                                                                                 commons-codec/commons-codec]}
+                                    com.cognitect/test-runner     {:git/url "https://github.com/cognitect-labs/test-runner.git"
+                                                                   :sha     "b6b3193fcc42659d7e46ecd1884a228993441182"}}
                       :main-opts   ["-m" "cognitect.test-runner"]}}}
