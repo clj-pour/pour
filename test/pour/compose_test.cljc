@@ -1,6 +1,5 @@
 (ns pour.compose-test
-  (:require #?@(:clj  [[clojure.test :refer [deftest testing is]]]
-                :cljs [[cljs.test :refer [deftest testing is]]])
+  (:require [clojure.test :refer [deftest testing is]]
             [pour.compose :refer [defcup render] :as pc]))
 
 (defmacro eval-in-temp-ns [& forms]

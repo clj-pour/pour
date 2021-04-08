@@ -1,6 +1,5 @@
 (ns pour.core-test
-  (:require #?@(:clj  [[clojure.test :refer [deftest testing is]]]
-                :cljs [[cljs.test :refer [deftest testing is]]])
+  (:require [clojure.test :refer [deftest testing is]]
             [pour.core :as pour]))
 
 (defrecord Test [a b])
