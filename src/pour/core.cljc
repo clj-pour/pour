@@ -116,6 +116,8 @@
        (->> {:value value}
             (merge ast)
             (parse env)
-            (ca/<!!))))))
+            (prn ::hi)
+            #?(:clj (ca/<!!)
+               :cljs (prn)))))))
 
 
