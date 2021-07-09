@@ -1,12 +1,13 @@
 (ns pour.core
   (:require [edn-query-language.core :as eql]
-            [clojure.core.async :as ca])
-  (:import (clojure.lang Seqable)))
+            [clojure.core.async :as ca]))
 
 (defn seqy? [s]
-  (and (not (:db/id s))
+  (and (not (nil? s))
+       (not (:db/id s))
        (not (map? s))
-       (instance? Seqable s)))
+       (not (string? s))
+       (seqable? s)))
 
 (defn pipe [_ {value :value}]
   value)
@@ -27,7 +28,7 @@
   (ca/go (ca/>! chan (let [on-error (or (:on-error env) (fn [t] (prn ::error t)))
                            resolved (try
                                       (knit env (merge {:value value} child))
-                                      (catch Throwable t
+                                      (catch #?(:clj Throwable :cljs :default) t
                                         (on-error t)
                                         nil))
                            {:keys [type key params]} child
@@ -35,9 +36,7 @@
                                     :prop resolved
                                     :union (let [union-dispatch (or (when-let [custom-dispatch (:union-dispatch node-params)]
                                                                       (or (and (fn? custom-dispatch) custom-dispatch)
-                                                                          (and (var? custom-dispatch) @custom-dispatch)
-                                                                          (and (symbol? custom-dispatch)
-                                                                               (some-> custom-dispatch resolve deref))))
+                                                                          (and (var? custom-dispatch) @custom-dispatch)))
                                                                     matches-union)]
                                              (if-not (fn? union-dispatch)
                                                (do (on-error (ex-info "Union-dispatch reference provided is not a function" {:params node-params}))
@@ -117,6 +116,8 @@
        (->> {:value value}
             (merge ast)
             (parse env)
-            (ca/<!!))))))
+            (prn ::hi)
+            #?(:clj (ca/<!!)
+               :cljs (prn)))))))
 
 

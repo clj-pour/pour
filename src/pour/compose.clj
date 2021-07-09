@@ -1,23 +1,18 @@
 (ns pour.compose
   (:require [clojure.walk :as walk]
-            [pour.core :as pour]))
+            [cljs.analyzer.api :as ana-api]
+            [cljs.analyzer :as ana]))
 
 (defn query
   [component]
   (into [(list ::renderer {:default component})]
         (:query (meta component))))
 
-(defn inject-query [renderers unprocessed-query]
-  (walk/prewalk (fn [query-part]
-                  (if (symbol? query-part)
-                    (let [component (get renderers (keyword query-part))
-                          {raw-query :query} (meta component)]
-                      (if raw-query
-                        (query component)
-                        (throw (ex-info (str "Missing renderer for " query-part)
-                                        {:query-part query-part}))))
-                    query-part))
-                unprocessed-query))
+(defn function?
+  "Returns true if argument is a function or a symbol that resolves to
+  a function (not a macro)."
+  [menv x]
+  (and (symbol? x) (ana/resolve-var menv x)))
 
 (defn validate-query [q]
   (if-not (vector? q)
@@ -34,7 +29,6 @@
                                   (if (vector? (second (first v)))
                                     (into acc (validate-query (second (first v))))
                                     acc)))
-
                               []
                               q)
           idents (keep (fn [v]
@@ -66,21 +60,24 @@
   (let [!unresolved-symbols# (atom #{})
         resolved-query# (walk/prewalk (fn [query-part]
                                         (if (symbol? query-part)
-                                          (if-let [rvar# (resolve &env query-part)]
-                                            (let [;; pick up unresolved renderers from children
-                                                  qp-unresolveds# (::unresolved (meta (deref rvar#)))
-                                                  mq# (:query (meta (deref rvar#)))]
-                                              ;; merge into accumulated unresolveds at this level
-                                              (when (seq qp-unresolveds#)
-                                                (swap! !unresolved-symbols# into qp-unresolveds#))
-                                              (if mq#
-                                                (query (deref rvar#))
-                                                (deref rvar#)))
-                                            (do
-                                              ;; the passed symbol doesn't correspond to anything we can resolve
-                                              ;; hence, we will expect it to be supplied at runtime
-                                              (swap! !unresolved-symbols# conj (keyword query-part))
-                                              query-part))
+                                          (do
+                                            (clojure.pprint/pprint {::c (resolve &env query-part)})
+                                            (clojure.pprint/pprint {::js (ana-api/resolve &env query-part)})
+                                            (if-let [rvar# (ana-api/resolve &env query-part)]
+                                              (let [;; pick up unresolved renderers from children
+                                                    qp-unresolveds# (::unresolved (meta (deref rvar#)))
+                                                    mq# (:query (meta (deref rvar#)))]
+                                                ;; merge into accumulated unresolveds at this level
+                                                (when (seq qp-unresolveds#)
+                                                  (swap! !unresolved-symbols# into qp-unresolveds#))
+                                                (if mq#
+                                                  (query (deref rvar#))
+                                                  (deref rvar#)))
+                                              (do
+                                                ;; the passed symbol doesn't correspond to anything we can resolve
+                                                ;; hence, we will expect it to be supplied at runtime
+                                                (swap! !unresolved-symbols# conj (keyword query-part))
+                                                query-part)))
                                           query-part))
                                       query-literal)
         query-errors# (validate-query resolved-query#)
@@ -93,20 +90,3 @@
                   (merge (meta ~body)
                          {::unresolved '~unresolveds#
                           :query       '~resolved-query#})))))
-
-(defn render
-  ([renderer value]
-   (render {} renderer value))
-  ([env renderer value]
-   (let [m (meta renderer)
-         unresolveds (::unresolved m)
-         renderers (::renderers env)
-         query (cond->> (:query m)
-                        (seq unresolveds) (inject-query renderers))]
-     (with-meta (->> (pour/pour (or env {})
-                                query
-                                value)
-                     (renderer))
-                {:renderer renderer
-                 :query    query}))))
-

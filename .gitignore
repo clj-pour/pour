@@ -14,3 +14,4 @@ pom.xml.asc
 .cpcache/
 /test-results
 /.cljs_node_repl
+/public
